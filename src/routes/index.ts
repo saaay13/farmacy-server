@@ -1,10 +1,12 @@
 import { Router } from 'express';
-import { getCategories } from '../controllers/homeController';
+import categoryRoutes from './categoryRoutes';
+import productRoutes from './productRoutes';
 import authRoutes from './authRoutes';
 
 const router = Router();
 
-router.use('/auth', authRoutes); // /api/auth/login, /api/auth/register
-router.get('/categories', getCategories);
+router.use('/auth', authRoutes);
+router.use('/categories', categoryRoutes);
+router.use('/products', productRoutes);
 
 export default router;
