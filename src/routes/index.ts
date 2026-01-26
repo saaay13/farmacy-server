@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { getHome, getCategories } from '../controllers/homeController';
+import { getCategories } from '../controllers/homeController';
+import authRoutes from './authRoutes';
 
 const router = Router();
 
-router.get('/', getHome);
-router.get('/test-db', getCategories);
+router.use('/auth', authRoutes); // /api/auth/login, /api/auth/register
+router.get('/categories', getCategories);
 
 export default router;

@@ -5,6 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
   schemas  = ["farmacy"]
 }
 
@@ -22,6 +23,7 @@ model Usuario {
   email     String  @unique(map: "uq_usuario_email") @db.VarChar
   rol       String  @db.VarChar
   avatarUrl String? @map("avatar_url") @db.VarChar
+  password  String  @default("123456") @db.VarChar
 
   @@map("usuario")
   @@schema("farmacy")
