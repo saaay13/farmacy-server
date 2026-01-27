@@ -1,6 +1,6 @@
-# Store Farmacy Server - Backend API
+# Store Farmacy Server - Backend Profesional 🚀
 
-Sistema de gestión integral para farmacias multisucursal, desarrollado con Node.js, Express y Prisma.
+Sistema de gestión integral e inteligente para farmacias multisucursal, desarrollado con Node.js, Express, Prisma y PostgreSQL. Ahora con arquitectura orientada a objetos (POO) y automatización avanzada.
 
 ## 🛠️ Tecnologías y Versiones
 
@@ -14,6 +14,7 @@ Sistema de gestión integral para farmacias multisucursal, desarrollado con Node
 ### Dependencias Principales
 - **bcryptjs** (^3.0.3): Encriptación de contraseñas.
 - **jsonwebtoken** (^9.0.3): Autenticación basada en tokens (JWT).
+- **node-cron** (^3.0.3): Automatización de tareas programadas.
 - **cors** (^2.8.6): Configuración de recursos cruzados.
 - **dotenv** (^17.2.3): Gestión de variables de entorno.
 
@@ -25,70 +26,57 @@ Sistema de gestión integral para farmacias multisucursal, desarrollado con Node
 
 ## ⚙️ Configuración del Proyecto
 
-### 1. Variables de Entorno
-Crea un archivo `.env` en la raíz de la carpeta `/server` con lo siguiente:
+### 1. Variables de Envorno
+Crea un archivo `.env` en la raíz de la carpeta `/server`:
 ```env
 DATABASE_URL="postgresql://USUARIO:PASSWORD@localhost:5432/farmacia?schema=farmacy"
 JWT_SECRET="tu_clave_secreta_aqui"
 ```
 
-### 2. Instalación
+### 2. Instalación y Ejecución
 ```bash
 npm install
-```
-
-### 3. Base de Datos (Prisma)
-Para generar el cliente de Prisma y sincronizar el esquema:
-```bash
 npx prisma generate
-```
-
----
-
-## 🚀 Ejecución
-
-**Modo Desarrollo**:
-```bash
 npm run dev
 ```
 El servidor estará disponible en `http://localhost:3001`
 
 ---
 
-## 🛣️ Estructura de la API
+## ✨ Características de Inteligencia y Seguridad
 
-### Autenticación (`/api/auth`)
-- `POST /register`: Registro de nuevos usuarios.
-- `POST /login`: Inicio de sesión y obtención de token.
+### 1. Blindaje Operativo
+- **Bloqueo de Vencidos**: No se permite la venta de productos caducados (Implementado en `SaleService`).
+- **Control de Recetas**: Validación por rol para medicamentos que requieren receta médica.
+- **Privacidad "Data Owner"**: Los clientes solo visualizan sus propias compras y un catálogo restringido.
 
-### Productos y Categorías
-- `/api/products`: CRUD completo con filtros por nombre y categoría.
-- `/api/categories`: Gestión de categorías de medicamentos.
+### 2. Automatización (Cron Jobs)
+- **Servicio de Alertas**: Escaneo diario de vencimientos próximos (60 días) y stock crítico.
+- **Promociones Automáticas**: Generación de sugerencias de descuento (15%) para evitar pérdidas por caducidad.
+- **Control Sabatino**: Automatización del cumplimiento de inventario todos los sábados a las 23:59.
 
-### Inventario y Lotes (`/api/inventory` / `/api/batches`)
-- Manejo de stock por sucursal.
-- Registro de lotes con fechas de vencimiento (Sistema FIFO automático).
-
-### Alertas y Promociones (`/api/alerts` / `/api/promotions`)
-- Generación de alertas automáticas (vencimientos a 60 días y stock bajo).
-- Sugerencia de promociones automáticas para productos por vencer.
-- Aprobación administrativa obligatoria para descuentos.
-
-### Ventas (`/api/sales`)
-- Procesamiento de ventas transaccional.
-- Validación de recetas médicas por rol (Clientes bloqueados para controlados).
-- Descuento automático de stock de los lotes más antiguos.
-
-### Reportes (`/api/reports`)
-- Reporte detallado de vencimientos y bajas.
-- Resumen consolidado de stock e ingresos.
+### 3. Logística Avanzada
+- **Sugerencias de Reabastecimiento**: Análisis inteligente de ventas (últimos 30 días) vs stock actual.
+- **Reportes Críticos**: Endpoint centralizado para visualizar productos con stock bajo y lotes por vencer.
 
 ---
 
-## 🔐 Seguridad y Roles
-El sistema implementa un control de acceso robusto basado en roles (RBAC) tanto a nivel de API como de Base de Datos:
+## 🛣️ Estructura de la API
 
-### Matriz de Permisos (Base de Datos)
+| Módulo | Endpoint Base | Funcionalidad Clave |
+| :--- | :--- | :--- |
+| **Auth** | `/api/auth` | Registro y Login con JWT (Roles) |
+| **Productos** | `/api/products` | Catálogo inteligente y filtros de seguridad |
+| **Inventario** | `/api/inventory` | Gestión de stock por sucursal |
+| **Lotes** | `/api/batches` | Sistema FIFO con fechas de vencimiento |
+| **Ventas** | `/api/sales` | Procesamiento transaccional enriquecido |
+| **Logística** | `/api/logistics` | Reabastecimiento inteligente y reportes |
+| **Promociones**| `/api/promotions`| Gestión y aprobación de descuentos |
+| **Alertas** | `/api/alerts` | Visualización de notificaciones del sistema |
+
+---
+
+## 🔐 Seguridad y Roles (Matriz de Permisos)
 
 | Recurso | Administrador | Farmacéutico | Vendedor | Cliente |
 | :--- | :--- | :--- | :--- | :--- |
@@ -97,11 +85,10 @@ El sistema implementa un control de acceso robusto basado en roles (RBAC) tanto 
 | **Inventario** | CRUD Total | Actualizar Stock | Ver stock | Sin acceso |
 | **Lote** | CRUD Total | Alta/Baja Lotes | Ver lotes | Sin acceso |
 | **Ventas** | Supervisión | Realizar Venta | Realizar Venta | Ver sus compras |
-| **Promociones**| Aprobar/Crear | Ver sugerencias | Ver sugerencias | Ver activas |
-| **Alertas** | Ver/Gestionar | Ver alertas | Ver alertas | Sin acceso |
+| **Logística** | CRUD Total | Ver Reportes | Sin acceso | Sin acceso |
 
 > [!NOTE]
-> * **Privacidad de Clientes**: Los clientes solo pueden visualizar productos en buen estado (no próximos a vencer) y que no requieran receta para venta directa.
+> * **Privacidad de Clientes**: Filtrado automático de medicamentos con receta y productos próximos a vencer.
 
 ---
 
@@ -117,34 +104,61 @@ server/
 │   ├── controllers/         # Lógica de orquestación de la API
 │   │   ├── alertController.ts
 │   │   ├── authController.ts
-│   │   ├── ...
+│   │   ├── batchController.ts
+│   │   ├── categoryController.ts
+│   │   ├── homeController.ts
+│   │   ├── inventoryController.ts
+│   │   ├── logisticsController.ts
+│   │   ├── productController.ts
+│   │   ├── promotionController.ts
+│   │   ├── reportController.ts
 │   │   └── saleController.ts
 │   ├── middleware/
-│   │   └── authMiddleware.ts   # Guardias de seguridad y validación JWT
-│   ├── models/              # Clases POO con lógica de negocio (Dominio)
+│   │   └── authMiddleware.ts    # Guardias de seguridad y validación JWT
+│   ├── models/               # Clases POO con lógica de negocio (Dominio)
+│   │   ├── Alerta.ts
+│   │   ├── Categoria.ts
+│   │   ├── DetalleVenta.ts
+│   │   ├── Inventario.ts
+│   │   ├── Lote.ts
 │   │   ├── Producto.ts
-│   │   ├── Venta.ts
 │   │   ├── Promocion.ts
-│   │   └── ...
-│   ├── routes/              # Definición de Endpoints
+│   │   ├── Sucursal.ts
+│   │   ├── Usuario.ts
+│   │   └── Venta.ts
+│   ├── routes/               # Definición de Endpoints
+│   │   ├── alertRoutes.ts
+│   │   ├── authRoutes.ts
+│   │   ├── batchRoutes.ts
 │   │   ├── categoryRoutes.ts
-│   │   ├── ...
-│   │   └── index.ts
-│   ├── services/           # Lotería de servicios complejos
-│   │   └── StockService.ts # Lógica de inventario y lotes
-│   └── index.ts             # Punto de entrada de la aplicación
-├── .env                     # Configuración de entorno
-├── package.json             # Gestión de dependencias
-├── README.md                # Documentación principal
-└── tsconfig.json            # Configuración de TypeScript
+│   │   ├── index.ts
+│   │   ├── inventoryRoutes.ts
+│   │   ├── logisticsRoutes.ts
+│   │   ├── productRoutes.ts
+│   │   ├── promotionRoutes.ts
+│   │   ├── reportRoutes.ts
+│   │   └── saleRoutes.ts
+│   ├── scripts/              # Scripts de utilidad y base de datos
+│   │   ├── check-db.ts
+│   │   └── init-db.ts
+│   ├── services/             # Servicios de dominio y automatización
+│   │   ├── AutomationService.ts
+│   │   ├── ProductService.ts
+│   │   ├── ReplenishmentService.ts
+│   │   ├── SaleService.ts
+│   │   └── StockService.ts
+│   └── index.ts              # Punto de entrada de la aplicación
+├── .env                      # Configuración de entorno
+├── package.json              # Gestión de dependencias
+├── README.md                 # Documentación principal
+└── tsconfig.json             # Configuración de TypeScript
 ```
 
 ---
 
 ## ✅ Objetivos Cumplidos
 
-- **Modelado POO**: Migración exitosa de controladores hacia un diseño orientado a objetos utilizando clases de dominio.
-- **Seguridad Multinivel**: Implementación de roles en PostgreSQL (`GRANT/REVOKE`) y protección de rutas en Express.
-- **Control de Inventario Inteligente**: Sistema de lotes FIFO con bloqueo automático de productos vencidos.
-- **Alertas y Automatización**: Motor de sugerencias para promociones y reportes de stock crítico.
-- **Escalabilidad**: Preparado para manejar catálogos de más de 2000 productos con alto performance.
+- **Arquitectura POO**: Migración total a un diseño basado en clases y servicios.
+- **Lógica de Negocio Robusta**: Sistema FIFO, bloqueo de vencidos y validación de roles.
+- **Servicios Automáticos**: Motor de alertas y promociones operando sin intervención humana.
+- **Logística Inteligente**: Asistente de compras basado en tendencias de venta.
