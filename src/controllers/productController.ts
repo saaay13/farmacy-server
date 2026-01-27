@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { ProductoModel } from '../models/Producto';
 
 // Listar productos con filtros (nombre, categoría, estado)
 export const getProducts = async (req: Request, res: Response) => {
@@ -30,7 +31,7 @@ export const getProductById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const product = await prisma.producto.findUnique({
+        const productData = await prisma.producto.findUnique({
             where: { id: String(id) },
             include: {
                 categoria: true,
@@ -39,11 +40,31 @@ export const getProductById = async (req: Request, res: Response) => {
             }
         });
 
-        if (!product) {
+        if (!productData) {
             return res.status(404).json({ success: false, message: 'Producto no encontrado' });
         }
 
-        res.json({ success: true, data: product });
+        // --- USO DEL MODELO POO ---
+        // Convertimos los datos planos de la DB en un Objeto con lógica
+        const productObj = new ProductoModel(
+            productData.id,
+            productData.nombre,
+            productData.estado,
+            Number(productData.precio),
+            productData.requiereReceta,
+            productData.idCategoria,
+            productData.descripcion,
+            productData.imageUrl
+        );
+
+        // Ahora podemos usar métodos del modelo
+        const finalResponse = {
+            ...productData,
+            infoEstado: productObj.getEstado(),
+            precioConDescuentoSugerido: productObj.calcularPrecioFinal(15) // Lógica encapsulada
+        };
+
+        res.json({ success: true, data: finalResponse });
     } catch (error: any) {
         res.status(500).json({ success: false, message: 'Error al obtener detalle del producto', error: error.message });
     }
@@ -98,8 +119,6 @@ export const deleteProduct = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        // Aquí podríamos hacer eliminación lógica cambiando el estado
-        // Pero por ahora haremos física si no tiene dependencias críticas
         await prisma.producto.delete({
             where: { id: String(id) }
         });
@@ -109,7 +128,7 @@ export const deleteProduct = async (req: Request, res: Response) => {
         if (error.code === 'P2003') {
             return res.status(400).json({
                 success: false,
-                message: 'No se puede eliminar el producto porque tiene registros asociados (lotes, inventario, etc.)'
+                message: 'No se puede eliminar el producto porque tiene registros asociados'
             });
         }
         res.status(500).json({ success: false, message: 'Error al eliminar producto', error: error.message });

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { StockService } from '../services/StockService';
 
 // Listar todos los lotes
 export const getBatches = async (req: Request, res: Response) => {
@@ -23,7 +24,7 @@ export const getBatches = async (req: Request, res: Response) => {
     }
 };
 
-// Crear un nuevo lote (Aumenta stock en inventario)
+// Crear un nuevo lote (Usando el Servicio y Modelo POO)
 export const createBatch = async (req: Request, res: Response) => {
     try {
         const { idProducto, fechaVencimiento, cantidad, numeroLote, idSucursal } = req.body;
@@ -32,53 +33,21 @@ export const createBatch = async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'Faltan campos obligatorios' });
         }
 
-        const result = await prisma.$transaction(async (tx: any) => {
-            const newBatch = await tx.lote.create({
-                data: {
-                    idProducto,
-                    fechaVencimiento: new Date(fechaVencimiento),
-                    cantidad: Number(cantidad),
-                    numeroLote
-                }
-            });
-
-            const inventory = await tx.inventario.findUnique({
-                where: { idProducto }
-            });
-
-            if (inventory) {
-                await tx.inventario.update({
-                    where: { idProducto },
-                    data: {
-                        stockTotal: inventory.stockTotal + Number(cantidad),
-                        fechaRevision: new Date()
-                    }
-                });
-            } else {
-                if (!idSucursal) {
-                    throw new Error('Se requiere idSucursal para crear el registro de inventario inicial');
-                }
-                await tx.inventario.create({
-                    data: {
-                        idProducto,
-                        idSucursal,
-                        stockTotal: Number(cantidad),
-                        fechaRevision: new Date()
-                    }
-                });
-            }
-
-            return newBatch;
+        const result = await StockService.registrarNuevoLote({
+            idProducto,
+            fechaVencimiento,
+            cantidad,
+            numeroLote,
+            idSucursal
         });
 
-        res.status(201).json({ success: true, message: 'Lote creado e inventario actualizado', data: result });
+        res.status(201).json({ success: true, message: 'Lote creado con éxito (Modelo POO)', data: result });
     } catch (error: any) {
-        console.error('Error al crear lote:', error);
         res.status(500).json({ success: false, message: 'Error al crear lote', error: error.message });
     }
 };
 
-// Eliminar un lote (Resta stock)
+// Eliminar un lote
 export const deleteBatch = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
