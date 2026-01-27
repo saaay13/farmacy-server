@@ -8,7 +8,7 @@ import promotionRoutes from './promotionRoutes';
 import saleRoutes from './saleRoutes';
 import reportRoutes from './reportRoutes';
 import authRoutes from './authRoutes';
-
+import logisticsRoutes from './logisticsRoutes';
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -20,5 +20,6 @@ router.use('/alerts', alertRoutes);
 router.use('/promotions', promotionRoutes);
 router.use('/sales', saleRoutes);
 router.use('/reports', reportRoutes);
+router.use('/logistics', logisticsRoutes); // Added
 
 export default router;

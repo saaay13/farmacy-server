@@ -8,10 +8,10 @@ POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-    "nombre": "Cliente",
-    "email": "cliente@farmacia.com",
+    "nombre": "Farmaceutico",
+    "email": "farmaceutico@farmacia.com",
     "password": "password123",
-    "rol": "cliente"
+    "rol": "farmaceutico"
 }
 
 ### 2. LOGIN (Obtener Token)
@@ -20,7 +20,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "email": "test@farmacia.com",
+    "email": "farmaceutico@farmacia.com",
     "password": "password123"
 }
 
@@ -68,6 +68,16 @@ Authorization: Bearer {{login.response.body.token}}
 GET {{baseUrl}}/promotions
 Authorization: Bearer {{login.response.body.token}}
 
-### 8. VER HISTORIAL DE VENTAS (FILTRADO)
+### 8. LOGÍSTICA: SUGERENCIAS DE REABASTECIMIENTO (Admin/Farmacéutico)
+# Analiza ventas de los últimos 30 días y stock actual
+GET {{baseUrl}}/logistics/replenishment
+Authorization: Bearer {{login.response.body.token}}
+
+### 9. LOGÍSTICA: REPORTE DE PRODUCTOS CRÍTICOS
+# Combina stock bajo y próximos a vencer
+GET {{baseUrl}}/logistics/critical-report
+Authorization: Bearer {{login.response.body.token}}
+
+### 10. VER HISTORIAL DE VENTAS (FILTRADO)
 GET {{baseUrl}}/sales
 Authorization: Bearer {{login.response.body.token}}

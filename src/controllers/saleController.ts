@@ -2,143 +2,41 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { VentaModel } from '../models/Venta';
 import { DetalleVentaModel } from '../models/DetalleVenta';
+import { SaleService } from '../services/SaleService';
 
-// 1. Crear una Venta
+// 1. Crear una Venta (Refactorizado con Service + OOP)
 export const createSale = async (req: Request, res: Response) => {
-    const { idCliente, detalles } = req.body; // detalles: [{idProducto, cantidad}]
-    const idVendedor = (req as any).user.id;
-    const userRole = (req as any).user.rol;
-
-    if (!detalles || detalles.length === 0) {
-        return res.status(400).json({ success: false, message: 'La venta debe tener al menos un producto' });
-    }
-
     try {
-        const result = await prisma.$transaction(async (tx: any) => {
-            let totalVenta = 0;
-            const saleDetailsData = [];
-            let hayProductoVencido = false;
+        const { idCliente, detalles } = req.body;
+        const idVendedor = (req as any).user.id;
+        const userRole = (req as any).user.rol;
 
-            for (const item of detalles) {
-                const { idProducto, cantidad } = item;
+        if (!detalles || detalles.length === 0) {
+            return res.status(400).json({ success: false, message: 'La venta debe tener al menos un producto' });
+        }
 
-                // A. Obtener producto y validar receta
-                const producto = await tx.producto.findUnique({ where: { id: idProducto } });
-                if (!producto) throw new Error(`Producto ${idProducto} no encontrado`);
+        // Delegar lógica al servicio de dominio
+        const saleRecord = await SaleService.processSale(idCliente, idVendedor, userRole, detalles);
 
-                // Regla: Clientes no pueden comprar directamente medicamentos con receta
-                if (producto.requiereReceta && userRole === 'cliente') {
-                    throw new Error(`El producto ${producto.nombre} requiere receta y no puede ser comprado directamente por un cliente. Por favor acuda a sucursal.`);
-                }
+        // Uso de modelos para respuesta enriquecida
+        const ventaObj = new VentaModel(
+            saleRecord.id,
+            saleRecord.idVendedor,
+            saleRecord.fecha,
+            Number(saleRecord.total),
+            saleRecord.idCliente,
+            saleRecord.ventaError ?? false
+        );
 
-                // B. Verificar stock en Inventario
-                const inventory = await tx.inventario.findUnique({ where: { idProducto } });
-                if (!inventory || inventory.stockTotal < cantidad) {
-                    throw new Error(`Stock insuficiente para ${producto.nombre}. Disponible: ${inventory?.stockTotal || 0}`);
-                }
-
-                // C. Descontar de Lotes (FIFO: primero los que vencen antes)
-                let cantidadRestante = cantidad;
-                const lotes = await tx.lote.findMany({
-                    where: { idProducto },
-                    orderBy: { fechaVencimiento: 'asc' }
-                });
-
-                const today = new Date();
-
-                for (const lote of lotes) {
-                    if (cantidadRestante <= 0) break;
-
-                    // VALIDACIÓN DE VENCIMIENTO (Regla de Oro)
-                    if (new Date(lote.fechaVencimiento) < today) {
-                        // El sistema debe bloquear la venta de productos vencidos
-                        // Excepto si queremos registrar el error (punto 15/46)
-                        // Por ahora bloqueamos estrictamente a menos que se fuerce (lógica futura)
-                        hayProductoVencido = true;
-                        throw new Error(`BLOQUEO: El lote ${lote.numeroLote} del producto ${producto.nombre} está vencido. No se puede realizar la venta.`);
-                    }
-
-                    if (lote.cantidad >= cantidadRestante) {
-                        await tx.lote.update({
-                            where: { id: lote.id },
-                            data: { cantidad: lote.cantidad - cantidadRestante }
-                        });
-                        cantidadRestante = 0;
-                    } else {
-                        cantidadRestante -= lote.cantidad;
-                        await tx.lote.update({
-                            where: { id: lote.id },
-                            data: { cantidad: 0 }
-                        });
-                    }
-                }
-
-                if (cantidadRestante > 0) {
-                    throw new Error(`Error inesperado: No hay lotes suficientes para cubrir el stock del producto ${producto.nombre}`);
-                }
-
-                // D. Actualizar Inventario global
-                await tx.inventario.update({
-                    where: { idProducto },
-                    data: {
-                        stockTotal: { decrement: cantidad },
-                        fechaRevision: new Date()
-                    }
-                });
-
-                // E. Preparar datos para el detalle
-                const subtotal = Number(producto.precio) * cantidad;
-                totalVenta += subtotal;
-
-                saleDetailsData.push({
-                    idProducto,
-                    cantidad,
-                    precioUnitario: Number(producto.precio),
-                    subtotal
-                });
+        res.status(201).json({
+            success: true,
+            message: 'Venta realizada con éxito (Arquitectura OOP)',
+            data: {
+                ...saleRecord,
+                infoEstado: ventaObj.ventaError ? 'CRÍTICA' : 'OK',
+                totalFormateado: ventaObj.getTotal().toFixed(2)
             }
-
-            // 2. Crear la Venta (Cabecera)
-            const saleData = await tx.venta.create({
-                data: {
-                    idCliente,
-                    idVendedor,
-                    fecha: new Date(),
-                    total: totalVenta,
-                    ventaError: hayProductoVencido, // Se marca si hubo algún vencido involucrado
-                    detalles: {
-                        create: saleDetailsData
-                    }
-                },
-                include: { detalles: true }
-            });
-
-            // --- USO DE MODELOS POO ---
-            const ventaObj = new VentaModel(
-                saleData.id,
-                saleData.idVendedor,
-                saleData.fecha,
-                Number(saleData.total),
-                saleData.idCliente,
-                saleData.ventaError ?? false
-            );
-
-            const detallesObj = saleData.detalles.map((d: any) =>
-                new DetalleVentaModel(d.id, d.idVenta, d.idProducto, d.cantidad, Number(d.precioUnitario))
-            );
-
-            return {
-                ...saleData,
-                totalCalculado: ventaObj.getTotal(),
-                infoEstado: ventaObj.ventaError ? 'VENTA CON ERROR (Producto Vencido)' : 'VENTA OK',
-                resumenDetalles: detallesObj.map((d: any) => ({
-                    productoId: d.idProducto,
-                    subtotal: d.getSubtotal()
-                }))
-            };
         });
-
-        res.status(201).json({ success: true, message: 'Venta realizada con éxito (Modelo POO)', data: result });
     } catch (error: any) {
         console.error('Sale Error:', error.message);
         res.status(400).json({ success: false, message: error.message });
