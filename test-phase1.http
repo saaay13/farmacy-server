@@ -20,7 +20,7 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "email": "cliente@farmacia.com",
+    "email": "test@farmacia.com",
     "password": "password123"
 }
 
@@ -60,6 +60,14 @@ Content-Type: application/json
     ]
 }
 
-### 6. VER HISTORIAL DE VENTAS (FILTRADO)
+### 6. VER ALERTAS (Generadas por el Robot)
+GET {{baseUrl}}/alerts
+Authorization: Bearer {{login.response.body.token}}
+
+### 7. VER PROMOCIONES SUGERIDAS (15% por vencimiento)
+GET {{baseUrl}}/promotions
+Authorization: Bearer {{login.response.body.token}}
+
+### 8. VER HISTORIAL DE VENTAS (FILTRADO)
 GET {{baseUrl}}/sales
 Authorization: Bearer {{login.response.body.token}}

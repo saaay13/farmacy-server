@@ -20,6 +20,7 @@ export const getProducts = async (req: Request, res: Response) => {
                 // SEGURIDAD: Si es cliente o invitado, aplicamos restricciones estrictas
                 AND: (userRole === 'cliente' || userRole === 'guest') ? [
                     { requiereReceta: false }, // No ve productos con receta
+                    { estado: 'activo' }, // Solo productos activos (oculta 'expirado', 'agotado', etc.)
                     {
                         NOT: {
                             lotes: {
@@ -71,6 +72,10 @@ export const getProductById = async (req: Request, res: Response) => {
         if (userRole === 'cliente' || userRole === 'guest') {
             if (productData.requiereReceta) {
                 return res.status(403).json({ success: false, message: 'Este producto requiere receta y no puede ser visualizado por clientes públicos.' });
+            }
+
+            if (productData.estado !== 'activo') {
+                return res.status(403).json({ success: false, message: 'Este producto no está disponible actualmente para venta directa.' });
             }
 
             const hasExpiringBaches = productData.lotes.some((l: any) => new Date(l.fechaVencimiento) <= sixtyDaysFromNow);
