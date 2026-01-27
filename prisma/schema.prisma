@@ -10,54 +10,43 @@ datasource db {
 }
 
 model Categoria {
-  id       String     @id(map: "pk_categoria") @default(dbgenerated("('c-'::text || nextval('farmacy.sec_categoria'::regclass))")) @db.VarChar
-  nombre   String     @unique(map: "uq_categoria_nombre") @db.VarChar
-  productos Producto[]
+  id     String @id(map: "pk_categoria") @default(dbgenerated("('c-'::text || nextval('sec_categoria'::regclass))")) @db.VarChar
+  nombre String @unique(map: "uq_categoria_nombre") @db.VarChar
 
   @@map("categoria")
   @@schema("farmacy")
 }
 
 model Usuario {
-  id             String   @id(map: "pk_usuario") @default(dbgenerated("('u-'::text || nextval('farmacy.sec_usuario'::regclass))")) @db.VarChar
-  nombre         String   @db.VarChar
-  email          String   @unique(map: "uq_usuario_email") @db.VarChar
-  rol            String   @db.VarChar
-  avatarUrl      String?  @map("avatar_url") @db.VarChar
-  password       String   @default("123456") @db.VarChar
-  alertas        Alerta[]
-  ventasCliente  Venta[]  @relation("VentaCliente")
-  ventasVendedor Venta[]  @relation("VentaVendedor")
+  id        String  @id(map: "pk_usuario") @default(dbgenerated("('u-'::text || nextval('sec_usuario'::regclass))")) @db.VarChar
+  nombre    String  @db.VarChar
+  email     String  @unique(map: "uq_usuario_email") @db.VarChar
+  rol       String  @db.VarChar
+  avatarUrl String? @map("avatar_url") @db.VarChar
+  password  String  @default("123456") @db.VarChar
 
   @@map("usuario")
   @@schema("farmacy")
 }
 
 model Sucursal {
-  idSucursal  String       @id(map: "pk_sucursal") @default(dbgenerated("('s-'::text || nextval('farmacy.sec_sucursal'::regclass))")) @map("id_sucursal") @db.VarChar
-  nombre      String       @db.VarChar
-  direccion   String       @db.VarChar
-  inventarios Inventario[]
+  idSucursal String @id(map: "pk_sucursal") @default(dbgenerated("('s-'::text || nextval('sec_sucursal'::regclass))")) @map("id_sucursal") @db.VarChar
+  nombre     String @db.VarChar
+  direccion  String @db.VarChar
 
   @@map("sucursal")
   @@schema("farmacy")
 }
 
 model Producto {
-  id             String         @id(map: "pk_producto") @default(dbgenerated("('p-'::text || nextval('farmacy.sec_producto'::regclass))")) @db.VarChar
-  nombre         String         @db.VarChar
-  descripcion    String?        @db.VarChar
-  precio         Decimal        @db.Decimal(10, 2)
-  requiereReceta Boolean        @map("requiere_receta")
-  estado         String         @db.VarChar
-  idCategoria    String         @map("id_categoria") @db.VarChar
-  imageUrl       String?        @map("image_url") @db.VarChar
-  categoria      Categoria     @relation(fields: [idCategoria], references: [id])
-  alertas        Alerta[]
-  detallesVenta  DetalleVenta[]
-  inventario     Inventario?
-  lotes          Lote[]
-  promociones    Promocion[]
+  id             String  @id(map: "pk_producto") @default(dbgenerated("('p-'::text || nextval('sec_producto'::regclass))")) @db.VarChar
+  nombre         String  @db.VarChar
+  descripcion    String? @db.VarChar
+  precio         Decimal @db.Decimal(10, 2)
+  requiereReceta Boolean @map("requiere_receta")
+  estado         String  @db.VarChar
+  idCategoria    String  @map("id_categoria") @db.VarChar
+  imageUrl       String? @map("image_url") @db.VarChar
 
   @@map("producto")
   @@schema("farmacy")
@@ -68,76 +57,65 @@ model Inventario {
   idSucursal    String   @map("id_sucursal") @db.VarChar
   stockTotal    Int      @map("stock_total")
   fechaRevision DateTime @map("fecha_revision") @db.Date
-  producto      Producto @relation(fields: [idProducto], references: [id])
-  sucursal      Sucursal @relation(fields: [idSucursal], references: [idSucursal])
 
   @@map("inventario")
   @@schema("farmacy")
 }
 
 model Lote {
-  id               String   @id(map: "pk_lote") @default(dbgenerated("('l-'::text || nextval('farmacy.sec_lote'::regclass))")) @db.VarChar
+  id               String   @id(map: "pk_lote") @default(dbgenerated("('l-'::text || nextval('sec_lote'::regclass))")) @db.VarChar
   idProducto       String   @map("id_producto") @db.VarChar
   fechaVencimiento DateTime @map("fecha_vencimiento") @db.Date
   cantidad         Int
   numeroLote       String   @map("numero_lote") @db.VarChar
-  producto         Producto @relation(fields: [idProducto], references: [id])
 
   @@map("lote")
   @@schema("farmacy")
 }
 
 model Promocion {
-  id                  String   @id(map: "pk_promocion") @default(dbgenerated("('pr-'::text || nextval('farmacy.sec_promocion'::regclass))")) @db.VarChar
+  id                  String   @id(map: "pk_promocion") @default(dbgenerated("('pr-'::text || nextval('sec_promocion'::regclass))")) @db.VarChar
   idProducto          String   @map("id_producto") @db.VarChar
   porcentajeDescuento Decimal  @map("porcentaje_descuento") @db.Decimal(5, 2)
   fechaInicio         DateTime @map("fecha_inicio") @db.Date
   fechaFin            DateTime @map("fecha_fin") @db.Date
   aprobada            Boolean
-  producto            Producto @relation(fields: [idProducto], references: [id])
 
   @@map("promocion")
   @@schema("farmacy")
 }
 
 model Venta {
-  id          String         @id(map: "pk_venta") @default(dbgenerated("('v-'::text || nextval('farmacy.sec_venta'::regclass))")) @db.VarChar
-  idCliente   String?        @map("id_cliente") @db.VarChar
-  idVendedor  String         @map("id_vendedor") @db.VarChar
-  fecha       DateTime       @db.Timestamp(6)
-  total       Decimal        @db.Decimal(10, 2)
-  ventaError  Boolean?       @default(false) @map("venta_error")
-  detalles    DetalleVenta[]
-  cliente     Usuario?       @relation("VentaCliente", fields: [idCliente], references: [id])
-  vendedor    Usuario        @relation("VentaVendedor", fields: [idVendedor], references: [id])
+  id         String   @id(map: "pk_venta") @default(dbgenerated("('v-'::text || nextval('sec_venta'::regclass))")) @db.VarChar
+  idCliente  String?  @map("id_cliente") @db.VarChar
+  idVendedor String   @map("id_vendedor") @db.VarChar
+  fecha      DateTime @db.Timestamp(6)
+  total      Decimal  @db.Decimal(10, 2)
+  ventaError Boolean? @default(false) @map("venta_error")
 
   @@map("venta")
   @@schema("farmacy")
 }
 
 model DetalleVenta {
-  id             String  @id(map: "pk_detalle_venta") @default(dbgenerated("('dv-'::text || nextval('farmacy.sec_detalle_venta'::regclass))")) @db.VarChar
+  id             String  @id(map: "pk_detalle_venta") @default(dbgenerated("('dv-'::text || nextval('sec_detalle_venta'::regclass))")) @db.VarChar
   idVenta        String  @map("id_venta") @db.VarChar
   idProducto     String  @map("id_producto") @db.VarChar
   cantidad       Int
   precioUnitario Decimal @map("precio_unitario") @db.Decimal(10, 2)
   subtotal       Decimal @db.Decimal(10, 2)
-  producto       Producto @relation(fields: [idProducto], references: [id])
-  venta          Venta    @relation(fields: [idVenta], references: [id])
 
   @@map("detalle_venta")
   @@schema("farmacy")
 }
 
 model Alerta {
-  id         String   @id(map: "pk_alerta") @default(dbgenerated("('a-'::text || nextval('farmacy.sec_alerta'::regclass))")) @db.VarChar
+  id         String   @id(map: "pk_alerta") @default(dbgenerated("('a-'::text || nextval('sec_alerta'::regclass))")) @db.VarChar
   tipo       String   @db.VarChar
   mensaje    String   @db.VarChar
   fecha      DateTime @db.Timestamp(6)
   idProducto String?  @map("id_producto") @db.VarChar
   idUsuario  String   @map("id_usuario") @db.VarChar
-  producto   Producto? @relation(fields: [idProducto], references: [id])
-  usuario    Usuario   @relation(fields: [idUsuario], references: [id])
 
   @@map("alerta")
   @@schema("farmacy")

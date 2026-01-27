@@ -1,0 +1,65 @@
+### VARIABLES
+@baseUrl = http://127.0.0.1:3001/api
+@adminToken = TU_TOKEN_AQUI
+
+### 1. REGISTRO (Crear un usuario de prueba)
+# Puedes cambiar el "rol" a 'admin', 'vendedor' o 'cliente' para probar los filtros
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+    "nombre": "Cliente",
+    "email": "cliente@farmacia.com",
+    "password": "password123",
+    "rol": "cliente"
+}
+
+### 2. LOGIN (Obtener Token)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+    "email": "cliente@farmacia.com",
+    "password": "password123"
+}
+
+### 2. LISTAR PRODUCTOS (COMO INVITADO)
+# Debería ocultar Amoxicilina (requiere receta)
+GET {{baseUrl}}/products
+
+### 3. LISTAR PRODUCTOS (COMO VENDEDOR/ADMIN)
+# Debería mostrar todo y los lotes
+# Usa el token del paso 1 si la extensión lo soporta, o pégalo aquí
+GET {{baseUrl}}/products
+Authorization: Bearer {{login.response.body.token}}
+
+### 4. INTENTAR VENTA DE PRODUCTO CON RECETA (CLIENTE)
+# Supongamos que somos un cliente (necesitarías un login de cliente primero)
+POST {{baseUrl}}/sales
+Authorization: Bearer TOKEN_DE_CLIENTE
+Content-Type: application/json
+
+{
+    "idCliente": "u-1",
+    "detalles": [
+        { "idProducto": "p-2", "cantidad": 1 }
+    ]
+}
+
+### 5. VERIFICAR BLOQUEO POR VENCIMIENTO
+# Si creas un lote vencido en la DB, este POST debería fallar con 400
+POST {{baseUrl}}/sales
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "idCliente": "u-1",
+    "detalles": [
+        { "idProducto": "p-1", "cantidad": 1 }
+    ]
+}
+
+### 6. VER HISTORIAL DE VENTAS (FILTRADO)
+GET {{baseUrl}}/sales
+Authorization: Bearer {{login.response.body.token}}

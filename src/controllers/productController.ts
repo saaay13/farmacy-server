@@ -6,15 +6,34 @@ import { ProductoModel } from '../models/Producto';
 export const getProducts = async (req: Request, res: Response) => {
     try {
         const { nombre, idCategoria, estado } = req.query;
+        const userRole = (req as any).user?.rol || 'guest';
+
+        const sixtyDaysFromNow = new Date();
+        sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
         const products = await prisma.producto.findMany({
             where: {
                 nombre: nombre ? { contains: String(nombre), mode: 'insensitive' } : undefined,
                 idCategoria: idCategoria ? String(idCategoria) : undefined,
                 estado: estado ? String(estado) : undefined,
+
+                // SEGURIDAD: Si es cliente o invitado, aplicamos restricciones estrictas
+                AND: (userRole === 'cliente' || userRole === 'guest') ? [
+                    { requiereReceta: false }, // No ve productos con receta
+                    {
+                        NOT: {
+                            lotes: {
+                                some: {
+                                    fechaVencimiento: { lte: sixtyDaysFromNow }
+                                }
+                            }
+                        }
+                    } // No ve productos con lotes próximos a vencer (<= 60 días)
+                ] : []
             },
             include: {
-                categoria: true
+                categoria: true,
+                lotes: userRole !== 'cliente' // Solo admin/staff ven detalles de lotes
             },
             orderBy: { nombre: 'asc' }
         });
@@ -30,6 +49,10 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const userRole = (req as any).user?.rol || 'guest';
+
+        const sixtyDaysFromNow = new Date();
+        sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
         const productData = await prisma.producto.findUnique({
             where: { id: String(id) },
@@ -44,8 +67,18 @@ export const getProductById = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, message: 'Producto no encontrado' });
         }
 
-        // --- USO DEL MODELO POO ---
-        // Convertimos los datos planos de la DB en un Objeto con lógica
+        // SEGURIDAD: Validación manual para preventas por ID directo de clientes/invitados
+        if (userRole === 'cliente' || userRole === 'guest') {
+            if (productData.requiereReceta) {
+                return res.status(403).json({ success: false, message: 'Este producto requiere receta y no puede ser visualizado por clientes públicos.' });
+            }
+
+            const hasExpiringBaches = productData.lotes.some((l: any) => new Date(l.fechaVencimiento) <= sixtyDaysFromNow);
+            if (hasExpiringBaches) {
+                return res.status(403).json({ success: false, message: 'Este producto no está disponible para venta directa por proximidad de vencimiento.' });
+            }
+        }
+
         const productObj = new ProductoModel(
             productData.id,
             productData.nombre,
@@ -57,11 +90,11 @@ export const getProductById = async (req: Request, res: Response) => {
             productData.imageUrl
         );
 
-        // Ahora podemos usar métodos del modelo
         const finalResponse = {
             ...productData,
+            lotes: (userRole === 'cliente' || userRole === 'guest') ? undefined : productData.lotes, // Ocultar lotes a clientes
             infoEstado: productObj.getEstado(),
-            precioConDescuentoSugerido: productObj.calcularPrecioFinal(15) // Lógica encapsulada
+            precioConDescuentoSugerido: productObj.calcularPrecioFinal(15)
         };
 
         res.json({ success: true, data: finalResponse });
