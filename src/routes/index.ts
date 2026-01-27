@@ -4,6 +4,8 @@ import productRoutes from './productRoutes';
 import batchRoutes from './batchRoutes';
 import inventoryRoutes from './inventoryRoutes';
 import alertRoutes from './alertRoutes';
+import promotionRoutes from './promotionRoutes';
+import saleRoutes from './saleRoutes';
 import authRoutes from './authRoutes';
 
 const router = Router();
@@ -14,5 +16,7 @@ router.use('/products', productRoutes);
 router.use('/batches', batchRoutes);
 router.use('/inventory', inventoryRoutes);
 router.use('/alerts', alertRoutes);
+router.use('/promotions', promotionRoutes);
+router.use('/sales', saleRoutes);
 
 export default router;

@@ -31,17 +31,33 @@ export const checkAndGenerateAlerts = async (req: Request, res: Response) => {
                 }
             });
 
-            if (!existingAlert) {
-                const alert = await prisma.alerta.create({
+            const alert = await prisma.alerta.create({
+                data: {
+                    tipo: 'expirado',
+                    mensaje: `Lote ${batch.numeroLote} del producto ${batch.producto.nombre} vencerá el ${batch.fechaVencimiento.toLocaleDateString()}`,
+                    fecha: new Date(),
+                    idProducto: batch.idProducto,
+                    idUsuario: (req as any).user.id
+                }
+            });
+            alertsCreated.push(alert);
+
+            // SUGERENCIA DE PROMOCIÓN AUTOMÁTICA
+            // Verificar si ya hay una promoción pendiente para este producto
+            const existingPromo = await prisma.promocion.findFirst({
+                where: { idProducto: batch.idProducto, aprobada: false }
+            });
+
+            if (!existingPromo) {
+                await prisma.promocion.create({
                     data: {
-                        tipo: 'expirado',
-                        mensaje: `Lote ${batch.numeroLote} del producto ${batch.producto.nombre} vencerá el ${batch.fechaVencimiento.toLocaleDateString()}`,
-                        fecha: new Date(),
                         idProducto: batch.idProducto,
-                        idUsuario: (req as any).user.id // Usuario que dispara el chequeo
+                        porcentajeDescuento: 15.00, // Sugerencia base
+                        fechaInicio: new Date(),
+                        fechaFin: batch.fechaVencimiento,
+                        aprobada: false
                     }
                 });
-                alertsCreated.push(alert);
             }
         }
 
