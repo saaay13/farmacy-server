@@ -86,10 +86,23 @@ El servidor estará disponible en `http://localhost:3001`
 ---
 
 ## 🔐 Seguridad y Roles
-El sistema maneja 4 roles con permisos diferenciados:
-1. **admin**: Control total, aprobación de promociones y reportes.
-2. **farmaceutico**: Gestión de stock, lotes, revisiones y reportes.
-3. **vendedor**: Realización de ventas y consulta de productos/stock.
+El sistema implementa un control de acceso robusto basado en roles (RBAC) tanto a nivel de API como de Base de Datos:
+
+### Matriz de Permisos (Base de Datos)
+
+| Recurso | Administrador | Farmacéutico | Vendedor | Cliente |
+| :--- | :--- | :--- | :--- | :--- |
+| **Usuarios** | CRUD Total | Ver perfil propio | Registra Clientes | Ver perfil propio |
+| **Productos** | CRUD Total | Ver catálogo | Ver catálogo | Ver catálogo* |
+| **Inventario** | CRUD Total | Actualizar Stock | Ver stock | Sin acceso |
+| **Lote** | CRUD Total | Alta/Baja Lotes | Ver lotes | Sin acceso |
+| **Ventas** | Supervisión | Realizar Venta | Realizar Venta | Ver sus compras |
+| **Promociones**| Aprobar/Crear | Ver sugerencias | Ver sugerencias | Ver activas |
+| **Alertas** | Ver/Gestionar | Ver alertas | Ver alertas | Sin acceso |
+
+> [!NOTE]
+> * **Privacidad de Clientes**: Los clientes solo pueden visualizar productos en buen estado (no próximos a vencer) y que no requieran receta para venta directa.
+
 ---
 
 ## 📂 Estructura del Proyecto
@@ -97,48 +110,41 @@ El sistema maneja 4 roles con permisos diferenciados:
 ```text
 server/
 ├── prisma/
-│   └── schema.prisma        # Definición de modelos y relaciones
+│   └── schema.prisma        # Definición de modelos y relaciones Prisma
 ├── src/
 │   ├── config/
 │   │   └── prisma.ts        # Cliente de Prisma (Singleton)
-│   ├── controllers/         # Lógica de negocio
+│   ├── controllers/         # Lógica de orquestación de la API
 │   │   ├── alertController.ts
 │   │   ├── authController.ts
-│   │   ├── batchController.ts
-│   │   ├── categoryController.ts
-│   │   ├── inventoryController.ts
-│   │   ├── productController.ts
-│   │   ├── promotionController.ts
-│   │   ├── reportController.ts
+│   │   ├── ...
 │   │   └── saleController.ts
 │   ├── middleware/
-│   │   └── authMiddleware.ts   # Autenticación y RBAC (Roles)
-│   ├── routes/              # Endpoints de la API
-│   │   ├── alertRoutes.ts
-│   │   ├── authRoutes.ts
-│   │   ├── batchRoutes.ts
+│   │   └── authMiddleware.ts   # Guardias de seguridad y validación JWT
+│   ├── models/              # Clases POO con lógica de negocio (Dominio)
+│   │   ├── Producto.ts
+│   │   ├── Venta.ts
+│   │   ├── Promocion.ts
+│   │   └── ...
+│   ├── routes/              # Definición de Endpoints
 │   │   ├── categoryRoutes.ts
-│   │   ├── inventoryRoutes.ts
-│   │   ├── productRoutes.ts
-│   │   ├── promotionRoutes.ts
-│   │   ├── reportRoutes.ts
-│   │   ├── saleRoutes.ts
+│   │   ├── ...
 │   │   └── index.ts
-│   └── index.ts             # Punto de entrada y Middleware global
-├── .env                     # Variables sensibles
-├── package.json             # Scripts y dependencias
-├── prisma.config.ts         # Configuración avanzada de Prisma
-├── README.md                # Documentación del proyecto
-└── tsconfig.json            # Configuración de compilación TS
+│   ├── services/           # Lotería de servicios complejos
+│   │   └── StockService.ts # Lógica de inventario y lotes
+│   └── index.ts             # Punto de entrada de la aplicación
+├── .env                     # Configuración de entorno
+├── package.json             # Gestión de dependencias
+├── README.md                # Documentación principal
+└── tsconfig.json            # Configuración de TypeScript
 ```
 
 ---
 
 ## ✅ Objetivos Cumplidos
 
-El sistema cumple de manera íntegra con:
-- **Integridad Transaccional**: Ventas y registros de stock protegidos mediante transacciones ACID.
-- **Control de Vencimientos**: Gestión inteligente de lotes (FIFO) y alertas automáticas a 60 días.
-- **Seguridad Robusta**: Autorización por roles (`RBAC`) en todos los puntos sensibles de la API.
-- **Eficiencia Operativa**: Generación automática de sugerencias de promociones y reportes estratégicos.
-- **Escalabilidad**: Arquitectura modular lista para el despliegue y conexión con Frontend.
+- **Modelado POO**: Migración exitosa de controladores hacia un diseño orientado a objetos utilizando clases de dominio.
+- **Seguridad Multinivel**: Implementación de roles en PostgreSQL (`GRANT/REVOKE`) y protección de rutas en Express.
+- **Control de Inventario Inteligente**: Sistema de lotes FIFO con bloqueo automático de productos vencidos.
+- **Alertas y Automatización**: Motor de sugerencias para promociones y reportes de stock crítico.
+- **Escalabilidad**: Preparado para manejar catálogos de más de 2000 productos con alto performance.

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { CategoriaModel } from '../models/Categoria';
 
 // Listar todas las categorías
 export const getCategories = async (req: Request, res: Response) => {
@@ -7,7 +8,17 @@ export const getCategories = async (req: Request, res: Response) => {
         const categories = await prisma.categoria.findMany({
             orderBy: { nombre: 'asc' }
         });
-        res.json({ success: true, count: categories.length, data: categories });
+
+        // --- USO DE MODELO POO ---
+        const categoriesWithLogic = categories.map((c: any) => {
+            const catObj = new CategoriaModel(c.id, c.nombre);
+            return {
+                ...c,
+                nombreDisplay: catObj.getNombreFormateado()
+            };
+        });
+
+        res.json({ success: true, count: categoriesWithLogic.length, data: categoriesWithLogic });
     } catch (error: any) {
         console.error('Error al obtener categorías:', error);
         res.status(500).json({ success: false, message: 'Error al obtener categorías', error: error.message });

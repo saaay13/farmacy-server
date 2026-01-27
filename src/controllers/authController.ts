@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { UsuarioModel } from '../models/Usuario';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'secret_key_change_me_in_prod';
 
 export const register = async (req: Request, res: Response) => {
@@ -50,22 +52,33 @@ export const login = async (req: Request, res: Response) => {
             return res.status(400).json({ status: 'error', message: 'Credenciales inválidas' });
         }
 
+        // --- USO DE MODELO POO ---
+        const userObj = new UsuarioModel(
+            user.id,
+            user.nombre,
+            user.email,
+            user.rol,
+            user.password,
+            user.avatarUrl
+        );
+
         // Generate Token
         const token = jwt.sign(
-            { id: user.id, email: user.email, rol: user.rol },
+            { id: userObj.id, email: userObj.email, rol: userObj.getRol() },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
 
         res.json({
             status: 'success',
-            message: 'Login exitoso',
+            message: 'Login exitoso (Modelo POO)',
             token,
             user: {
-                id: user.id,
-                email: user.email,
-                rol: user.rol,
-                nombre: user.nombre
+                id: userObj.id,
+                email: userObj.email,
+                rol: userObj.getRol(),
+                nombre: userObj.nombre,
+                esAdmin: userObj.esAdmin()
             }
         });
     } catch (error: any) {

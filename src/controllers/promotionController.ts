@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { PromocionModel } from '../models/Promocion';
 
 // 1. Obtener promociones (filtrables por aprobación)
 export const getPromotions = async (req: Request, res: Response) => {
@@ -18,7 +19,24 @@ export const getPromotions = async (req: Request, res: Response) => {
             orderBy: { fechaInicio: 'desc' }
         });
 
-        res.json({ success: true, count: promotions.length, data: promotions });
+        // --- USO DE MODELO POO ---
+        const promotionsWithLogic = promotions.map((p: any) => {
+            const promoObj = new PromocionModel(
+                p.id,
+                p.idProducto,
+                Number(p.porcentajeDescuento),
+                p.fechaInicio,
+                p.fechaFin,
+                p.aprobada
+            );
+            return {
+                ...p,
+                estaVigente: promoObj.estaVigente(),
+                esAprobada: promoObj.esAprobada()
+            };
+        });
+
+        res.json({ success: true, count: promotionsWithLogic.length, data: promotionsWithLogic });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -76,7 +94,23 @@ export const approvePromotion = async (req: Request, res: Response) => {
             return updatedPromotion;
         });
 
-        res.json({ success: true, message: 'Promoción aprobada y aplicada al producto', data: result });
+        const promoObj = new PromocionModel(
+            result.id,
+            result.idProducto,
+            Number(result.porcentajeDescuento),
+            result.fechaInicio,
+            result.fechaFin,
+            result.aprobada
+        );
+
+        res.json({
+            success: true,
+            message: 'Promoción aprobada y aplicada al producto',
+            data: {
+                ...result,
+                esAprobada: promoObj.esAprobada()
+            }
+        });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }

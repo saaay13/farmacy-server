@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
+import { VentaModel } from '../models/Venta';
+import { DetalleVentaModel } from '../models/DetalleVenta';
 
 // 1. Crear una Venta
 export const createSale = async (req: Request, res: Response) => {
@@ -57,8 +59,6 @@ export const createSale = async (req: Request, res: Response) => {
                             where: { id: lote.id },
                             data: { cantidad: 0 }
                         });
-                        // Opcional: podrías borrar el lote si llega a 0, 
-                        // pero según regla se da de baja si vence. Aquí solo bajamos stock.
                     }
                 }
 
@@ -82,13 +82,13 @@ export const createSale = async (req: Request, res: Response) => {
                 saleDetailsData.push({
                     idProducto,
                     cantidad,
-                    precioUnitario: producto.precio,
+                    precioUnitario: Number(producto.precio),
                     subtotal
                 });
             }
 
             // 2. Crear la Venta (Cabecera)
-            const sale = await tx.venta.create({
+            const saleData = await tx.venta.create({
                 data: {
                     idCliente,
                     idVendedor,
@@ -101,10 +101,30 @@ export const createSale = async (req: Request, res: Response) => {
                 include: { detalles: true }
             });
 
-            return sale;
+            // --- USO DE MODELOS POO ---
+            const ventaObj = new VentaModel(
+                saleData.id,
+                saleData.idVendedor,
+                saleData.fecha,
+                Number(saleData.total),
+                saleData.idCliente
+            );
+
+            const detallesObj = saleData.detalles.map((d: any) =>
+                new DetalleVentaModel(d.id, d.idVenta, d.idProducto, d.cantidad, Number(d.precioUnitario))
+            );
+
+            return {
+                ...saleData,
+                totalCalculado: ventaObj.getTotal(),
+                resumenDetalles: detallesObj.map((d: any) => ({
+                    productoId: d.idProducto,
+                    subtotal: d.getSubtotal()
+                }))
+            };
         });
 
-        res.status(201).json({ success: true, message: 'Venta realizada con éxito', data: result });
+        res.status(201).json({ success: true, message: 'Venta realizada con éxito (Modelo POO)', data: result });
     } catch (error: any) {
         console.error('Sale Error:', error.message);
         res.status(400).json({ success: false, message: error.message });
@@ -124,7 +144,17 @@ export const getSales = async (req: Request, res: Response) => {
             },
             orderBy: { fecha: 'desc' }
         });
-        res.json({ success: true, data: sales });
+
+        // Opcional: Instanciar para cada venta si fuera necesario aplicar lógica
+        const optimizedSales = sales.map((s: any) => {
+            const ventaObj = new VentaModel(s.id, s.idVendedor, s.fecha, Number(s.total), s.idCliente);
+            return {
+                ...s,
+                totalFormateado: ventaObj.getTotal().toFixed(2)
+            };
+        });
+
+        res.json({ success: true, data: optimizedSales });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -144,7 +174,19 @@ export const getSaleById = async (req: Request, res: Response) => {
         });
 
         if (!sale) return res.status(404).json({ success: false, message: 'Venta no encontrada' });
-        res.json({ success: true, data: sale });
+
+        const ventaObj = new VentaModel(sale.id, sale.idVendedor, sale.fecha, Number(sale.total), sale.idCliente);
+
+        res.json({
+            success: true,
+            data: {
+                ...sale,
+                infoPOO: {
+                    total: ventaObj.getTotal(),
+                    esError: ventaObj.ventaError
+                }
+            }
+        });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }
