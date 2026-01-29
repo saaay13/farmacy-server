@@ -4,7 +4,7 @@ import { VentaModel } from '../models/Venta';
 import { DetalleVentaModel } from '../models/DetalleVenta';
 import { SaleService } from '../services/SaleService';
 
-// 1. Crear una Venta (Refactorizado con Service + OOP)
+// Crear una Venta (Refactorizado con Service + OOP)
 export const createSale = async (req: Request, res: Response) => {
     try {
         const { idCliente, detalles } = req.body;
@@ -43,7 +43,7 @@ export const createSale = async (req: Request, res: Response) => {
     }
 };
 
-// 2. Obtener historial de ventas (Con Filtrado por Dueño)
+// Obtener historial de ventas (Con Filtrado por Dueño)
 export const getSales = async (req: Request, res: Response) => {
     try {
         const userId = (req as any).user.id;
@@ -79,7 +79,7 @@ export const getSales = async (req: Request, res: Response) => {
     }
 };
 
-// 3. Ver detalle de una venta (Con Validación de Acceso)
+// Ver detalle de una venta (Con Validación de Acceso)
 export const getSaleById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;

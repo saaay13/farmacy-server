@@ -2,7 +2,7 @@ import prisma from '../config/prisma';
 import { LoteModel } from '../models/Lote';
 
 export class StockService {
-    // Mover aquí la lógica que estaba en el controlador para que use el Modelo
+    // Registrar nuevo lote
     public static async registrarNuevoLote(datos: any) {
         return await prisma.$transaction(async (tx: any) => {
             const newBatch = await tx.lote.create({
@@ -14,7 +14,7 @@ export class StockService {
                 }
             });
 
-            // Usamos el modelo Lote para cualquier validación extra si fuera necesario
+            // Validaciones de modelo
             const loteObj = new LoteModel(
                 newBatch.id,
                 newBatch.idProducto,
@@ -49,7 +49,7 @@ export class StockService {
         const lotes = await prisma.lote.findMany({
             where: { activo: true }
         });
-        // Filtrar usando la lógica del MODELO
+        // Lógica de modelo
         return lotes
             .map((l: any) => new LoteModel(l.id, l.idProducto, l.fechaVencimiento, l.cantidad, l.numeroLote))
             .filter((l: LoteModel) => l.estaVencido());

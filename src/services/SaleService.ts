@@ -5,10 +5,7 @@ import { VentaModel } from '../models/Venta';
 import { DetalleVentaModel } from '../models/DetalleVenta';
 
 export class SaleService {
-    /**
-     * Procesa una venta completa dentro de una transacción.
-     * Encapsula reglas FIFO, validación de recetas y bloqueo de vencimientos.
-     */
+    // Procesar venta
     public static async processSale(idCliente: string | null, idVendedor: string, userRole: string, detalles: any[]) {
         return await prisma.$transaction(async (tx: any) => {
             let totalVenta = 0;
@@ -18,7 +15,7 @@ export class SaleService {
             for (const item of detalles) {
                 const { idProducto, cantidad } = item;
 
-                // 1. Validar Producto con Modelo POO
+                // Validar producto
                 const productData = await tx.producto.findFirst({ where: { id: idProducto, activo: true } });
                 if (!productData) throw new Error(`Producto ${idProducto} no encontrado`);
 
@@ -35,13 +32,13 @@ export class SaleService {
                     throw new Error(`BLOQUEO: El producto ${productObj.nombre} requiere receta y no puede ser comprado por su rol actual.`);
                 }
 
-                // 2. Verificar Stock
+                // Verificar stock
                 const inventory = await tx.inventario.findUnique({ where: { idProducto } });
                 if (!inventory || inventory.stockTotal < cantidad) {
                     throw new Error(`Stock insuficiente para ${productObj.nombre}.`);
                 }
 
-                // 3. Obtener promociones activas del producto
+                // Promociones activas
                 const promociones = await tx.promocion.findMany({
                     where: {
                         idProducto,
@@ -52,7 +49,7 @@ export class SaleService {
                     }
                 });
 
-                // 4. Lógica FIFO con Precios por Lote
+                // Lógica FIFO
                 let cantidadRestante = cantidad;
                 const lotesData = await tx.lote.findMany({
                     where: { idProducto, activo: true },
@@ -80,7 +77,7 @@ export class SaleService {
                     // Actualizar o desactivar lote
                     const nuevaCantidad = loteObj.cantidad - cantidadADescontar;
                     if (nuevaCantidad === 0) {
-                        // Desactivar lote si se agota completamente (Soft Delete)
+                        // Actualizar o desactivar lote
                         await tx.lote.update({
                             where: { id: loteObj.id },
                             data: { activo: false, cantidad: 0 }
@@ -107,14 +104,14 @@ export class SaleService {
 
                 if (cantidadRestante > 0) throw new Error(`Stock real inconsistente para ${productObj.nombre}`);
 
-                // 5. Actualizar Inventario
+                // Actualizar inventario
                 await tx.inventario.update({
                     where: { idProducto },
                     data: { stockTotal: { decrement: cantidad }, fechaRevision: new Date() }
                 });
             }
 
-            // 6. Crear Venta
+            // Registrar venta
             const saleRecord = await tx.venta.create({
                 data: {
                     idCliente,

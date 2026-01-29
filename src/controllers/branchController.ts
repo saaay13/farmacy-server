@@ -13,7 +13,6 @@ export const getSucursales = async (req: Request, res: Response) => {
             orderBy: { nombre: 'asc' }
         });
 
-        // --- USO DE MODELO POO ---
         const sucursalesWithLogic = sucursales.map((s: any) => {
             const sucObj = new SucursalModel(
                 s.idSucursal,

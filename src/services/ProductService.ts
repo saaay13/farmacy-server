@@ -1,9 +1,7 @@
 import prisma from '../config/prisma';
 
 export class ProductService {
-    /**
-     * Obtiene una lista de productos filtrada por reglas de seguridad de rol.
-     */
+    // Obtener productos filtrados
     public static async getFilteredProducts(filters: any, userRole: string) {
         const { nombre, idCategoria, estado, includeDeactivated } = filters;
         const sixtyDaysFromNow = new Date();
@@ -16,7 +14,7 @@ export class ProductService {
                 estado: estado ? String(estado) : undefined,
                 activo: String(includeDeactivated) === 'true' ? undefined : true,
 
-                // Reglas de Visibilidad (Refactorizadas)
+                // Reglas de visibilidad
                 AND: (userRole === 'cliente' || userRole === 'guest') ? [
                     // { requiereReceta: false }, // PERMITIMOS ver productos con receta (Fase 6)
                     {
@@ -69,9 +67,7 @@ export class ProductService {
         return results;
     }
 
-    /**
-     * Valida si un producto es visible para un rol específico.
-     */
+    // Validar visibilidad
     public static isProductVisible(product: any, userRole: string): boolean {
         if (userRole === 'admin' || userRole === 'farmaceutico') return true;
 

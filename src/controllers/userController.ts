@@ -1,14 +1,12 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 
-// Listar todos los usuarios (Personal + Clientes) con soporte de filtros
+// Listar usuarios
 export const getUsers = async (req: Request, res: Response) => {
     try {
         const { rol, includeDeactivated } = req.query;
         const requesterRole = (req as any).user.rol;
 
-        // Si no es admin y pide todos, limitamos por seguridad o según necesidad de negocio
-        // Para el POS, los vendedores necesitan ver 'clientes'.
         const users = await prisma.usuario.findMany({
             where: {
                 rol: rol ? String(rol) : undefined,
@@ -31,7 +29,7 @@ export const getUsers = async (req: Request, res: Response) => {
     }
 };
 
-// Eliminar un usuario (Protección: No-admin solo elimina clientes)
+// Eliminar usuario
 export const deleteUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -45,7 +43,7 @@ export const deleteUser = async (req: Request, res: Response) => {
         const targetUser = await prisma.usuario.findFirst({ where: { id: String(id), activo: true } });
         if (!targetUser) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
 
-        // Lógica de seguridad: Solo admin borra personal. Vendedores solo borran clientes.
+        // Lógica de seguridad
         if (requesterRole !== 'admin' && targetUser.rol !== 'cliente') {
             return res.status(403).json({ success: false, message: 'No tienes permisos para eliminar personal administrativo' });
         }
@@ -60,13 +58,13 @@ export const deleteUser = async (req: Request, res: Response) => {
     }
 };
 
-// Crear un nuevo usuario (Protección: No-admin solo crea clientes)
+// Crear usuario
 export const createUser = async (req: Request, res: Response) => {
     try {
         const { nombre, email, password, rol } = req.body;
         const requesterRole = (req as any).user.rol;
 
-        // Seguridad: Si no es admin, solo puede crear 'cliente'
+        // Lógica de seguridad
         const finalRol = requesterRole === 'admin' ? rol : 'cliente';
 
         const existingUser = await prisma.usuario.findUnique({ where: { email } });
@@ -90,7 +88,7 @@ export const createUser = async (req: Request, res: Response) => {
     }
 };
 
-// Actualizar usuario completo (Protección: No-admin solo actualiza clientes o A SÍ MISMO)
+// Actualizar usuario
 export const updateUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -114,11 +112,11 @@ export const updateUser = async (req: Request, res: Response) => {
             nombre,
             email,
             avatarUrl,
-            // Solo admin puede cambiar roles. Si es self-update, mantiene su rol original.
+            // Asignación de rol
             rol: requesterRole === 'admin' && !isSelfUpdate ? rol : targetUser.rol
         };
 
-        // Si se envía password, hashearlo
+        // Hasheo de password
         if (password && password.trim() !== '') {
             const bcrypt = require('bcryptjs'); // Lazy load or import at top if possible
             updateData.password = await bcrypt.hash(password, 10);
@@ -136,7 +134,7 @@ export const updateUser = async (req: Request, res: Response) => {
     }
 };
 
-// Actualizar rol de usuario (por si se quiere promover a alguien)
+// Actualizar rol
 export const updateUserRole = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -153,7 +151,7 @@ export const updateUserRole = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
-// Restaurar un usuario desactivado (Solo Admin)
+// Restaurar usuario
 export const restoreUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;

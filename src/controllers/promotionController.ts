@@ -126,7 +126,7 @@ export const approvePromotion = async (req: Request, res: Response) => {
     }
 };
 
-// 4. Eliminar/Rechazar promoción
+// Eliminar/Rechazar promoción
 export const deletePromotion = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;

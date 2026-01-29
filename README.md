@@ -55,9 +55,9 @@ El servidor estará disponible en `http://localhost:3001`
 - **Promociones Automáticas**: Generación de sugerencias de descuento (15%) para evitar pérdidas por caducidad.
 - **Control Sabatino**: Automatización del cumplimiento de inventario todos los sábados a las 23:59.
 
-### 3. Logística Avanzada
-- **Sugerencias de Reabastecimiento**: Análisis inteligente de ventas (últimos 30 días) vs stock actual.
-- **Reportes Críticos**: Endpoint centralizado para visualizar productos con stock bajo y lotes por vencer.
+### 3. Logística
+- **Reabastecimiento**: Análisis inteligente de ventas vs stock.
+- **Reportes Críticos**: Stock bajo y vencimientos.
 
 ---
 
@@ -95,73 +95,9 @@ El servidor estará disponible en `http://localhost:3001`
 
 ---
 
-## 📂 Estructura del Proyecto
-
-```text
-server/
-├── prisma/
-│   └── schema.prisma        # Definición de modelos y relaciones Prisma
-├── src/
-│   ├── config/
-│   │   └── prisma.ts        # Cliente de Prisma (Singleton)
-│   ├── controllers/         # Lógica de orquestación de la API
-│   │   ├── alertController.ts
-│   │   ├── authController.ts
-│   │   ├── batchController.ts
-│   │   ├── categoryController.ts
-│   │   ├── homeController.ts
-│   │   ├── inventoryController.ts
-│   │   ├── logisticsController.ts
-│   │   ├── productController.ts
-│   │   ├── promotionController.ts
-│   │   ├── reportController.ts
-│   │   └── saleController.ts
-│   ├── middleware/
-│   │   └── authMiddleware.ts    # Guardias de seguridad y validación JWT
-│   ├── models/               # Clases POO con lógica de negocio (Dominio)
-│   │   ├── Alerta.ts
-│   │   ├── Categoria.ts
-│   │   ├── DetalleVenta.ts
-│   │   ├── Inventario.ts
-│   │   ├── Lote.ts
-│   │   ├── Producto.ts
-│   │   ├── Promocion.ts
-│   │   ├── Sucursal.ts
-│   │   ├── Usuario.ts
-│   │   └── Venta.ts
-│   ├── routes/               # Definición de Endpoints
-│   │   ├── alertRoutes.ts
-│   │   ├── authRoutes.ts
-│   │   ├── batchRoutes.ts
-│   │   ├── categoryRoutes.ts
-│   │   ├── index.ts
-│   │   ├── inventoryRoutes.ts
-│   │   ├── logisticsRoutes.ts
-│   │   ├── productRoutes.ts
-│   │   ├── promotionRoutes.ts
-│   │   ├── reportRoutes.ts
-│   │   └── saleRoutes.ts
-│   ├── scripts/              # Scripts de utilidad y base de datos
-│   │   ├── check-db.ts
-│   │   └── init-db.ts
-│   ├── services/             # Servicios de dominio y automatización
-│   │   ├── AutomationService.ts
-│   │   ├── ProductService.ts
-│   │   ├── ReplenishmentService.ts
-│   │   ├── SaleService.ts
-│   │   └── StockService.ts
-│   └── index.ts              # Punto de entrada de la aplicación
-├── .env                      # Configuración de entorno
-├── package.json              # Gestión de dependencias
-├── README.md                 # Documentación principal
-└── tsconfig.json             # Configuración de TypeScript
-```
-
----
-
 ## ✅ Objetivos Cumplidos
 
-- **Arquitectura POO**: Migración total a un diseño basado en clases y servicios.
-- **Lógica de Negocio Robusta**: Sistema FIFO, bloqueo de vencidos y validación de roles.
-- **Servicios Automáticos**: Motor de alertas y promociones operando sin intervención humana.
-- **Logística Inteligente**: Asistente de compras basado en tendencias de venta.
+- **POO**: Arquitectura basada en clases y servicios.
+- **Negocio**: FIFO y validación de roles.
+- **Automatización**: Alertas y promociones automáticas.
+- **Logística**: Asistente de compras inteligente.

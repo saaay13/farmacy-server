@@ -4,8 +4,7 @@ import { authenticateToken, authorizeRole } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Las rutas de usuarios están ahora protegidas por lógica interna en el controller
-// para que roles no-admin solo puedan interactuar con cuentas tipo 'cliente'
+// Gestión de usuarios
 router.use(authenticateToken);
 router.use(authorizeRole(['admin', 'farmaceutico', 'vendedor']));
 

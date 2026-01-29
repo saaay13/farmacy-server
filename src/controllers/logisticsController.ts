@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { ReplenishmentService } from '../services/ReplenishmentService';
 
-/**
- * Obtiene sugerencias inteligentes de reabastecimiento
- */
+
+//Obtiene sugerencias inteligentes de reabastecimiento
+
 export const getReplenishmentSuggestions = async (req: Request, res: Response) => {
     try {
         const suggestions = await ReplenishmentService.getSuggestions();
@@ -17,9 +17,7 @@ export const getReplenishmentSuggestions = async (req: Request, res: Response) =
     }
 };
 
-/**
- * Obtiene el reporte consolidado de productos en estado crítico
- */
+//Obtiene el reporte consolidado de productos en estado crítico
 export const getCriticalProductsReport = async (req: Request, res: Response) => {
     try {
         const report = await ReplenishmentService.getCriticalReport();

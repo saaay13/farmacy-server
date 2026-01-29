@@ -4,13 +4,11 @@ import { authenticateToken, authorizeRole, optionalAuthenticate } from '../middl
 
 const router = Router();
 
-// Rutas públicas/protegidas según parámetros
-// GET con aprobada=true es público (para clientes)
-// GET sin parámetros o aprobada=false requiere autenticación (staff)
+// Listar promociones
 router.get('/', optionalAuthenticate, getPromotions);
 router.post('/', authenticateToken, authorizeRole(['admin', 'farmaceutico', 'vendedor']), createPromotion);
 
-// Solo Admin puede aprobar o eliminar promociones críticas
+// Gestión de promociones
 router.patch('/:id/approve', authenticateToken, authorizeRole(['admin']), approvePromotion);
 router.delete('/:id', authenticateToken, authorizeRole(['admin']), deletePromotion);
 router.patch('/:id/restore', authenticateToken, authorizeRole(['admin']), restorePromotion);

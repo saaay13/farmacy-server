@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 
-// 1. Reporte de productos próximos a vencer (ventana de 60 días)
+//  Reporte de productos próximos a vencer (ventana de 60 días)
 export const getExpiringProductsReport = async (req: Request, res: Response) => {
     try {
         const today = new Date();
@@ -36,7 +36,7 @@ export const getExpiringProductsReport = async (req: Request, res: Response) => 
     }
 };
 
-// 2. Reporte de productos vencidos (Stock bloqueado)
+// Reporte de productos vencidos (Stock bloqueado)
 export const getExpiredProductsReport = async (req: Request, res: Response) => {
     try {
         const today = new Date();
@@ -65,7 +65,7 @@ export const getExpiredProductsReport = async (req: Request, res: Response) => {
     }
 };
 
-// 3. Reporte de stock actual por sucursal
+// Reporte de stock actual por sucursal
 export const getStockReport = async (req: Request, res: Response) => {
     try {
         const stockData = await prisma.inventario.findMany({
@@ -93,7 +93,7 @@ export const getStockReport = async (req: Request, res: Response) => {
     }
 };
 
-// 4. Resumen de ventas (Total recaudado y cantidad de transacciones)
+// Resumen de ventas (Total recaudado y cantidad de transacciones)
 export const getSalesReport = async (req: Request, res: Response) => {
     try {
         const { days = 30 } = req.query;
@@ -143,7 +143,7 @@ export const getSalesReport = async (req: Request, res: Response) => {
     }
 };
 
-// 5. Reporte detallado de ventas por producto
+// Reporte detallado de ventas por producto
 export const getSalesByProductReport = async (req: Request, res: Response) => {
     try {
         const productSales = await prisma.detalleVenta.groupBy({

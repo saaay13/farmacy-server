@@ -2,20 +2,18 @@ import cron from 'node-cron';
 import prisma from '../config/prisma';
 
 export class AutomationService {
-    /**
-     * Inicia todas las tareas programadas del sistema
-     */
+    // Iniciar tareas programadas
     public static init() {
         console.log('🚀 Iniciando Servicio de Automatización...');
 
-        // 1. REVISIÓN OBLIGATORIA DE SÁBADOS (Punto 13)
+        // Revisión de sábados
         // Se ejecuta todos los sábados a las 23:59
         cron.schedule('59 23 * * 6', async () => {
             console.log('📅 Ejecutando revisión obligatoria de sábados...');
             await this.performSaturdayInventoryCheck();
         });
 
-        // 2. ESCANEO DIARIO DE VENCIMIENTOS Y STOCK (Punto 12)
+        // Escaneo de vencimientos y stock
         // Se ejecuta todos los días a las 00:01
         cron.schedule('1 0 * * *', async () => {
             console.log('🔍 Escaneando productos próximos a vencer y stock bajo...');
@@ -26,9 +24,7 @@ export class AutomationService {
         this.generateExpiryAndStockAlerts();
     }
 
-    /**
-     * Marca todo el inventario como revisado (Punto 13)
-     */
+    // Marcar inventario como revisado
     private static async performSaturdayInventoryCheck() {
         try {
             const result = await prisma.inventario.updateMany({
@@ -42,15 +38,13 @@ export class AutomationService {
         }
     }
 
-    /**
-     * Genera alertas y promociones automáticas (Punto 12)
-     */
+    // Generar alertas y promociones
     private static async generateExpiryAndStockAlerts() {
         try {
             const sixtyDaysFromNow = new Date();
             sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-            // A. Buscar lotes próximos a vencer (<= 60 días)
+            // Lotes próximos a vencer
             const expiringLots = await prisma.lote.findMany({
                 where: {
                     fechaVencimiento: {
@@ -63,7 +57,7 @@ export class AutomationService {
             });
 
             for (const lote of expiringLots) {
-                // 1. Verificar si ya existe alerta hoy para este producto
+                // Verificar duplicados
                 const existingAlert = await prisma.alerta.findFirst({
                     where: {
                         idProducto: lote.idProducto,
@@ -84,7 +78,7 @@ export class AutomationService {
                     });
                 }
 
-                // 2. Crear Promoción Automática (15% descuento)
+                // Crear promoción automática
                 // Verificamos si ya existe una promoción activa para este producto
                 const existingPromo = await prisma.promocion.findFirst({
                     where: {

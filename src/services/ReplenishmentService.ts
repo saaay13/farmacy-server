@@ -11,14 +11,12 @@ export interface ReplenishmentSuggestion {
 }
 
 export class ReplenishmentService {
-    /**
-     * Analiza el inventario y genera sugerencias de compra
-     */
+    // Obtener sugerencias de reabastecimiento
     public static async getSuggestions(): Promise<ReplenishmentSuggestion[]> {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-        // 1. Obtener todos los productos con su stock actual
+        // Obtener productos y stock
         const inventory = await prisma.inventario.findMany();
         const products = await prisma.producto.findMany({
             where: { estado: 'activo', activo: true }
@@ -36,7 +34,7 @@ export class ReplenishmentService {
             const stockRecord = inventory.find(i => i.idProducto === product.id);
             const stockActual = stockRecord?.stockTotal ?? 0;
 
-            // 2. Calcular ventas del último mes para este producto
+            // Ventas del último mes
             const salesCount = await prisma.detalleVenta.aggregate({
                 where: {
                     idProducto: product.id,
@@ -47,9 +45,7 @@ export class ReplenishmentService {
 
             const ventasMes = salesCount._sum.cantidad ?? 0;
 
-            // Lógica de sugerencia:
-            // - Si el stock es menor a 10 y hay ventas -> ALTA
-            // - Si el stock es menor al 50% de lo vendido en el mes -> MEDIA
+            // Lógica de sugerencias
 
             let cantidadSugerida = 0;
             let nivelUrgencia: 'ALTA' | 'MEDIA' | 'BAJA' = 'BAJA';
@@ -84,9 +80,7 @@ export class ReplenishmentService {
         });
     }
 
-    /**
-     * Genera un reporte de productos en estado crítico
-     */
+    // Generar reporte crítico
     public static async getCriticalReport() {
         const sixtyDaysFromNow = new Date();
         sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
