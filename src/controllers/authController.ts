@@ -46,9 +46,9 @@ export const login = async (req: Request, res: Response) => {
         const { email, password } = req.body;
 
         // Find user
-        const user = await prisma.usuario.findUnique({ where: { email } });
+        const user = await prisma.usuario.findFirst({ where: { email, activo: true } });
         if (!user) {
-            return res.status(400).json({ status: 'error', message: 'Credenciales inválidas' });
+            return res.status(400).json({ status: 'error', message: 'Credenciales inválidas o cuenta desactivada' });
         }
 
         // Verify password

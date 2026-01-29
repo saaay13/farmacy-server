@@ -21,7 +21,7 @@ export class ReplenishmentService {
         // 1. Obtener todos los productos con su stock actual
         const inventory = await prisma.inventario.findMany();
         const products = await prisma.producto.findMany({
-            where: { estado: 'activo' }
+            where: { estado: 'activo', activo: true }
         });
 
         const suggestions: ReplenishmentSuggestion[] = [];
@@ -98,7 +98,8 @@ export class ReplenishmentService {
         const expiringSoon = await prisma.lote.findMany({
             where: {
                 fechaVencimiento: { lte: sixtyDaysFromNow, gte: new Date() },
-                cantidad: { gt: 0 }
+                cantidad: { gt: 0 },
+                activo: true
             },
             include: { producto: true }
         });

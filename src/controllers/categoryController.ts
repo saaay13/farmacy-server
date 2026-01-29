@@ -5,7 +5,9 @@ import { CategoriaModel } from '../models/Categoria';
 // Listar todas las categorías
 export const getCategories = async (req: Request, res: Response) => {
     try {
+        const { includeDeactivated } = req.query;
         const categories = await prisma.categoria.findMany({
+            where: { activo: includeDeactivated === 'true' ? undefined : true },
             orderBy: { nombre: 'asc' }
         });
 
@@ -81,12 +83,36 @@ export const deleteCategory = async (req: Request, res: Response) => {
             });
         }
 
-        await prisma.categoria.delete({
-            where: { id: String(id) }
+        await prisma.categoria.update({
+            where: { id: String(id) },
+            data: { activo: false }
         });
 
         res.json({ success: true, message: 'Categoría eliminada exitosamente' });
     } catch (error: any) {
         res.status(500).json({ success: false, message: 'Error al eliminar categoría', error: error.message });
+    }
+};
+
+// Restaurar una categoría (Solo Admin y Farmacéutico)
+export const restoreCategory = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const category = await prisma.categoria.findUnique({ where: { id: String(id) } });
+        if (!category) return res.status(404).json({ success: false, message: 'Categoría no encontrada' });
+
+        if (category.activo) {
+            return res.status(400).json({ success: false, message: 'La categoría ya está activa' });
+        }
+
+        const restoredCategory = await prisma.categoria.update({
+            where: { id: String(id) },
+            data: { activo: true }
+        });
+
+        res.json({ success: true, message: 'Categoría restaurada exitosamente', data: restoredCategory });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: 'Error al restaurar categoría', error: error.message });
     }
 };

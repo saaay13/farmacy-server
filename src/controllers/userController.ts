@@ -4,21 +4,23 @@ import prisma from '../config/prisma';
 // Listar todos los usuarios (Personal + Clientes) con soporte de filtros
 export const getUsers = async (req: Request, res: Response) => {
     try {
-        const { rol } = req.query;
+        const { rol, includeDeactivated } = req.query;
         const requesterRole = (req as any).user.rol;
 
         // Si no es admin y pide todos, limitamos por seguridad o según necesidad de negocio
         // Para el POS, los vendedores necesitan ver 'clientes'.
         const users = await prisma.usuario.findMany({
             where: {
-                rol: rol ? String(rol) : undefined
+                rol: rol ? String(rol) : undefined,
+                activo: includeDeactivated === 'true' ? undefined : true
             },
             select: {
                 id: true,
                 nombre: true,
                 email: true,
                 rol: true,
-                avatarUrl: true
+                avatarUrl: true,
+                activo: true
             },
             orderBy: { nombre: 'asc' }
         });
@@ -40,7 +42,7 @@ export const deleteUser = async (req: Request, res: Response) => {
             return res.status(400).json({ success: false, message: 'No puedes eliminar tu propia cuenta' });
         }
 
-        const targetUser = await prisma.usuario.findUnique({ where: { id: String(id) } });
+        const targetUser = await prisma.usuario.findFirst({ where: { id: String(id), activo: true } });
         if (!targetUser) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
 
         // Lógica de seguridad: Solo admin borra personal. Vendedores solo borran clientes.
@@ -48,7 +50,10 @@ export const deleteUser = async (req: Request, res: Response) => {
             return res.status(403).json({ success: false, message: 'No tienes permisos para eliminar personal administrativo' });
         }
 
-        await prisma.usuario.delete({ where: { id: String(id) } });
+        await prisma.usuario.update({
+            where: { id: String(id) },
+            data: { activo: false }
+        });
         res.json({ success: true, message: 'Usuario eliminado exitosamente' });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
@@ -144,6 +149,34 @@ export const updateUserRole = async (req: Request, res: Response) => {
         });
 
         res.json({ success: true, data: updatedUser });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+// Restaurar un usuario desactivado (Solo Admin)
+export const restoreUser = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const requesterRole = (req as any).user.rol;
+
+        if (requesterRole !== 'admin') {
+            return res.status(403).json({ success: false, message: 'Solo los administradores pueden restaurar cuentas' });
+        }
+
+        const targetUser = await prisma.usuario.findFirst({ where: { id: String(id) } });
+        if (!targetUser) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+
+        if (targetUser.activo) {
+            return res.status(400).json({ success: false, message: 'El usuario ya está activo' });
+        }
+
+        const restoredUser = await prisma.usuario.update({
+            where: { id: String(id) },
+            data: { activo: true },
+            select: { id: true, nombre: true, email: true, rol: true, activo: true }
+        });
+
+        res.json({ success: true, message: 'Usuario restaurado exitosamente', data: restoredUser });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }

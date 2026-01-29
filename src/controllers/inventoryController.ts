@@ -10,7 +10,8 @@ export const getInventory = async (req: Request, res: Response) => {
         const inventory = await prisma.inventario.findMany({
             where: {
                 idSucursal: idSucursal ? String(idSucursal) : undefined,
-                idProducto: idProducto ? String(idProducto) : undefined
+                idProducto: idProducto ? String(idProducto) : undefined,
+                producto: { activo: true }
             },
             include: {
                 producto: {

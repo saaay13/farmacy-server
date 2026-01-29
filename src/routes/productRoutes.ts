@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getProducts, getProductById, createProduct, updateProduct, deleteProduct } from '../controllers/productController';
+import { getProducts, getProductById, createProduct, updateProduct, deleteProduct, restoreProduct } from '../controllers/productController';
 import { authenticateToken, authorizeRole, optionalAuthenticate } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -12,5 +12,6 @@ router.get('/:id', optionalAuthenticate, getProductById);
 router.post('/', authenticateToken, authorizeRole(['admin', 'farmaceutico']), createProduct);
 router.put('/:id', authenticateToken, authorizeRole(['admin', 'farmaceutico']), updateProduct);
 router.delete('/:id', authenticateToken, authorizeRole(['admin', 'farmaceutico']), deleteProduct);
+router.patch('/:id/restore', authenticateToken, authorizeRole(['admin', 'farmaceutico']), restoreProduct);
 
 export default router;

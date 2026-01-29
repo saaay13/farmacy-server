@@ -19,7 +19,7 @@ export class SaleService {
                 const { idProducto, cantidad } = item;
 
                 // 1. Validar Producto con Modelo POO
-                const productData = await tx.producto.findUnique({ where: { id: idProducto } });
+                const productData = await tx.producto.findFirst({ where: { id: idProducto, activo: true } });
                 if (!productData) throw new Error(`Producto ${idProducto} no encontrado`);
 
                 const productObj = new ProductoModel(
@@ -46,6 +46,7 @@ export class SaleService {
                     where: {
                         idProducto,
                         aprobada: true,
+                        activo: true,
                         fechaInicio: { lte: new Date() },
                         fechaFin: { gte: new Date() }
                     }
@@ -54,7 +55,7 @@ export class SaleService {
                 // 4. Lógica FIFO con Precios por Lote
                 let cantidadRestante = cantidad;
                 const lotesData = await tx.lote.findMany({
-                    where: { idProducto },
+                    where: { idProducto, activo: true },
                     orderBy: { fechaVencimiento: 'asc' }
                 });
 
@@ -76,12 +77,13 @@ export class SaleService {
                     const precioUnitario = productObj.calcularPrecioFinal(descuento);
                     const subtotalLote = precioUnitario * cantidadADescontar;
 
-                    // Actualizar o eliminar lote
+                    // Actualizar o desactivar lote
                     const nuevaCantidad = loteObj.cantidad - cantidadADescontar;
                     if (nuevaCantidad === 0) {
-                        // Eliminar lote si se agota completamente
-                        await tx.lote.delete({
-                            where: { id: loteObj.id }
+                        // Desactivar lote si se agota completamente (Soft Delete)
+                        await tx.lote.update({
+                            where: { id: loteObj.id },
+                            data: { activo: false, cantidad: 0 }
                         });
                     } else {
                         // Actualizar cantidad si aún quedan unidades

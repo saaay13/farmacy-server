@@ -18,7 +18,8 @@ export const getPromotions = async (req: Request, res: Response) => {
 
         const promotions = await prisma.promocion.findMany({
             where: {
-                aprobada: aprobada !== undefined ? aprobada === 'true' : undefined
+                aprobada: aprobada !== undefined ? aprobada === 'true' : undefined,
+                activo: true
             },
             include: {
                 producto: {
@@ -81,7 +82,7 @@ export const approvePromotion = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const promotion = await prisma.promocion.findUnique({ where: { id: String(id) } });
+        const promotion = await prisma.promocion.findFirst({ where: { id: String(id), activo: true } });
         if (!promotion) {
             return res.status(404).json({ success: false, message: 'Promoción no encontrada' });
         }
@@ -130,7 +131,7 @@ export const deletePromotion = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const promotion = await prisma.promocion.findUnique({ where: { id: String(id) } });
+        const promotion = await prisma.promocion.findFirst({ where: { id: String(id), activo: true } });
 
         if (promotion && promotion.aprobada) {
             // Si estaba aprobada, devolver el producto a estado 'activo'
@@ -140,8 +141,33 @@ export const deletePromotion = async (req: Request, res: Response) => {
             });
         }
 
-        await prisma.promocion.delete({ where: { id: String(id) } });
+        await prisma.promocion.update({
+            where: { id: String(id) },
+            data: { activo: false }
+        });
         res.json({ success: true, message: 'Promoción eliminada' });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+// Restaurar una promoción desactivada
+export const restorePromotion = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const promotion = await prisma.promocion.findUnique({ where: { id: String(id) } });
+        if (!promotion) return res.status(404).json({ success: false, message: 'Promoción no encontrada' });
+
+        if (promotion.activo) {
+            return res.status(400).json({ success: false, message: 'La promoción ya está activa' });
+        }
+
+        const restoredPromotion = await prisma.promocion.update({
+            where: { id: String(id) },
+            data: { activo: true }
+        });
+
+        res.json({ success: true, message: 'Promoción restaurada exitosamente', data: restoredPromotion });
     } catch (error: any) {
         res.status(500).json({ success: false, error: error.message });
     }

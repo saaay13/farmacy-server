@@ -5,14 +5,18 @@ import { SucursalModel } from '../models/Sucursal';
 // Listar sucursales
 export const getSucursales = async (req: Request, res: Response) => {
     try {
+        const { includeDeactivated } = req.query;
+        const where = includeDeactivated === 'true' ? {} : { activo: true };
+
         const sucursales = await prisma.sucursal.findMany({
+            where,
             orderBy: { nombre: 'asc' }
         });
 
         // --- USO DE MODELO POO ---
         const sucursalesWithLogic = sucursales.map((s: any) => {
             const sucObj = new SucursalModel(
-                s.id_sucursal,
+                s.idSucursal,
                 s.nombre,
                 s.direccion
             );
@@ -102,18 +106,41 @@ export const deleteSucursal = async (req: Request, res: Response) => {
             });
         }
 
-        await prisma.sucursal.delete({
-            where: { idSucursal: String(id) }
+        await prisma.sucursal.update({
+            where: { idSucursal: String(id) },
+            data: { activo: false }
         });
 
         res.json({
             success: true,
-            message: 'Sucursal eliminada exitosamente'
+            message: 'Sucursal desactivada exitosamente'
         });
     } catch (error: any) {
         res.status(500).json({
             success: false,
-            message: 'Error al eliminar sucursal',
+            message: 'Error al desactivar sucursal',
+            error: error.message
+        });
+    }
+};
+
+export const restoreSucursal = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        await prisma.sucursal.update({
+            where: { idSucursal: String(id) },
+            data: { activo: true }
+        });
+
+        res.json({
+            success: true,
+            message: 'Sucursal reactivada exitosamente'
+        });
+    } catch (error: any) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al reactivar sucursal',
             error: error.message
         });
     }

@@ -111,8 +111,9 @@ export const deleteProduct = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        await prisma.producto.delete({
-            where: { id: String(id) }
+        await prisma.producto.update({
+            where: { id: String(id) },
+            data: { activo: false }
         });
 
         res.json({ success: true, message: 'Producto eliminado exitosamente' });
@@ -124,5 +125,27 @@ export const deleteProduct = async (req: Request, res: Response) => {
             });
         }
         res.status(500).json({ success: false, message: 'Error al eliminar producto', error: error.message });
+    }
+};
+// Restaurar un producto desactivado
+export const restoreProduct = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        const product = await prisma.producto.findUnique({ where: { id: String(id) } });
+        if (!product) return res.status(404).json({ success: false, message: 'Producto no encontrado' });
+
+        if (product.activo) {
+            return res.status(400).json({ success: false, message: 'El producto ya está activo' });
+        }
+
+        const restoredProduct = await prisma.producto.update({
+            where: { id: String(id) },
+            data: { activo: true }
+        });
+
+        res.json({ success: true, message: 'Producto restaurado exitosamente', data: restoredProduct });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: 'Error al restaurar producto', error: error.message });
     }
 };

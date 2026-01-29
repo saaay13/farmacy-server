@@ -9,7 +9,7 @@ import saleRoutes from './saleRoutes';
 import reportRoutes from './reportRoutes';
 import authRoutes from './authRoutes';
 import logisticsRoutes from './logisticsRoutes';
-import banchRoutes from './banchRoutes';
+import branchRoutes from './branchRoutes';
 import userRoutes from './userRoutes';
 const router = Router();
 
@@ -24,5 +24,5 @@ router.use('/promotions', promotionRoutes);
 router.use('/sales', saleRoutes);
 router.use('/reports', reportRoutes);
 router.use('/logistics', logisticsRoutes); // Added
-router.use('/banch', banchRoutes); // Added
+router.use('/branches', branchRoutes); // Added
 export default router;

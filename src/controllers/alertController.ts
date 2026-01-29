@@ -16,7 +16,8 @@ export const checkAndGenerateAlerts = async (req: Request, res: Response) => {
                 fechaVencimiento: {
                     lte: sixtyDaysFromNow,
                     gte: today
-                }
+                },
+                activo: true
             },
             include: { producto: true }
         });
@@ -64,7 +65,8 @@ export const checkAndGenerateAlerts = async (req: Request, res: Response) => {
         // 2. Revisar stock bajo (digamos < 10 unidades por simplicidad)
         const lowStockInventory = await prisma.inventario.findMany({
             where: {
-                stockTotal: { lt: 10 }
+                stockTotal: { lt: 10 },
+                producto: { activo: true }
             },
             include: { producto: true }
         });

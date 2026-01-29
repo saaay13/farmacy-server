@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getSucursales, createSucursal, updateSucursal, deleteSucursal } from '../controllers/banchController';
+import { getSucursales, createSucursal, updateSucursal, deleteSucursal, restoreSucursal } from '../controllers/branchController';
 import { authenticateToken, authorizeRole } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -11,5 +11,6 @@ router.get('/', getSucursales);
 router.post('/', authenticateToken, authorizeRole(['admin']), createSucursal);
 router.put('/:id', authenticateToken, authorizeRole(['admin']), updateSucursal);
 router.delete('/:id', authenticateToken, authorizeRole(['admin']), deleteSucursal);
+router.patch('/:id/restore', authenticateToken, authorizeRole(['admin']), restoreSucursal);
 
 export default router;

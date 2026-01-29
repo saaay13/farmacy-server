@@ -5,11 +5,12 @@ import { StockService } from '../services/StockService';
 // Listar todos los lotes
 export const getBatches = async (req: Request, res: Response) => {
     try {
-        const { idProducto } = req.query;
+        const { idProducto, includeDeactivated } = req.query;
 
         const batches = await prisma.lote.findMany({
             where: {
-                idProducto: idProducto ? String(idProducto) : undefined
+                idProducto: idProducto ? String(idProducto) : undefined,
+                activo: includeDeactivated === 'true' ? undefined : true
             },
             include: {
                 producto: true
@@ -53,7 +54,7 @@ export const deleteBatch = async (req: Request, res: Response) => {
         const { id } = req.params;
 
         await prisma.$transaction(async (tx: any) => {
-            const batch = await tx.lote.findUnique({ where: { id: String(id) } });
+            const batch = await tx.lote.findFirst({ where: { id: String(id), activo: true } });
 
             if (!batch) {
                 throw new Error('Lote no encontrado');
@@ -67,11 +68,52 @@ export const deleteBatch = async (req: Request, res: Response) => {
                 }
             });
 
-            await tx.lote.delete({ where: { id: String(id) } });
+            await tx.lote.update({
+                where: { id: String(id) },
+                data: { activo: false }
+            });
         });
 
         res.json({ success: true, message: 'Lote eliminado e inventario actualizado' });
     } catch (error: any) {
         res.status(500).json({ success: false, message: 'Error al eliminar lote', error: error.message });
+    }
+};
+
+// Restaurar un lote (Incrementa inventario)
+export const restoreBatch = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        await prisma.$transaction(async (tx: any) => {
+            const batch = await tx.lote.findUnique({ where: { id: String(id) } });
+
+            if (!batch) {
+                throw new Error('Lote no encontrado');
+            }
+
+            if (batch.activo) {
+                throw new Error('El lote ya está activo');
+            }
+
+            // Incrementar inventario
+            await tx.inventario.update({
+                where: { idProducto: batch.idProducto },
+                data: {
+                    stockTotal: { increment: batch.cantidad },
+                    fechaRevision: new Date()
+                }
+            });
+
+            // Activar lote
+            await tx.lote.update({
+                where: { id: String(id) },
+                data: { activo: true }
+            });
+        });
+
+        res.json({ success: true, message: 'Lote restaurado e inventario actualizado' });
+    } catch (error: any) {
+        res.status(500).json({ success: false, message: 'Error al restaurar lote', error: error.message });
     }
 };

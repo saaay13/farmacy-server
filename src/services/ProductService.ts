@@ -5,7 +5,7 @@ export class ProductService {
      * Obtiene una lista de productos filtrada por reglas de seguridad de rol.
      */
     public static async getFilteredProducts(filters: any, userRole: string) {
-        const { nombre, idCategoria, estado } = filters;
+        const { nombre, idCategoria, estado, includeDeactivated } = filters;
         const sixtyDaysFromNow = new Date();
         sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
@@ -14,6 +14,7 @@ export class ProductService {
                 nombre: nombre ? { contains: String(nombre), mode: 'insensitive' } : undefined,
                 idCategoria: idCategoria ? String(idCategoria) : undefined,
                 estado: estado ? String(estado) : undefined,
+                activo: String(includeDeactivated) === 'true' ? undefined : true,
 
                 // Reglas de Visibilidad (Refactorizadas)
                 AND: (userRole === 'cliente' || userRole === 'guest') ? [

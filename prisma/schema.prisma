@@ -12,6 +12,7 @@ datasource db {
 model Categoria {
   id        String     @id(map: "pk_categoria") @default(dbgenerated("('c-'::text || nextval('sec_categoria'::regclass))")) @db.VarChar
   nombre    String     @unique(map: "uq_categoria_nombre") @db.VarChar
+  activo    Boolean    @default(true)
   productos Producto[]
 
   @@map("categoria")
@@ -25,6 +26,7 @@ model Usuario {
   rol          String   @db.VarChar
   avatarUrl    String?  @map("avatar_url") @db.VarChar
   password     String   @default("123456") @db.VarChar
+  activo       Boolean  @default(true)
   alertas      Alerta[]
   ventas_cli   Venta[]  @relation("cliente")
   ventas_vend  Venta[]  @relation("vendedor")
@@ -37,6 +39,7 @@ model Sucursal {
   idSucursal  String       @id(map: "pk_sucursal") @default(dbgenerated("('s-'::text || nextval('sec_sucursal'::regclass))")) @map("id_sucursal") @db.VarChar
   nombre      String       @db.VarChar
   direccion   String       @db.VarChar
+  activo      Boolean      @default(true)
   inventarios Inventario[]
 
   @@map("sucursal")
@@ -52,6 +55,7 @@ model Producto {
   estado         String         @db.VarChar
   idCategoria    String         @map("id_categoria") @db.VarChar
   imageUrl       String?        @map("image_url") @db.VarChar
+  activo         Boolean        @default(true)
   alertas        Alerta[]
   detalles       DetalleVenta[]
   inventario     Inventario?
@@ -81,6 +85,7 @@ model Lote {
   fechaVencimiento DateTime @map("fecha_vencimiento") @db.Date
   cantidad         Int
   numeroLote       String   @map("numero_lote") @db.VarChar
+  activo           Boolean  @default(true)
   producto         Producto @relation(fields: [idProducto], references: [id])
 
   @@map("lote")
@@ -94,6 +99,7 @@ model Promocion {
   fechaInicio         DateTime @map("fecha_inicio") @db.Date
   fechaFin            DateTime @map("fecha_fin") @db.Date
   aprobada            Boolean
+  activo              Boolean  @default(true)
   producto            Producto @relation(fields: [idProducto], references: [id])
 
   @@map("promocion")

@@ -46,7 +46,9 @@ export class StockService {
     }
 
     public static async obtenerLotesVencidos() {
-        const lotes = await prisma.lote.findMany();
+        const lotes = await prisma.lote.findMany({
+            where: { activo: true }
+        });
         // Filtrar usando la lógica del MODELO
         return lotes
             .map((l: any) => new LoteModel(l.id, l.idProducto, l.fechaVencimiento, l.cantidad, l.numeroLote))

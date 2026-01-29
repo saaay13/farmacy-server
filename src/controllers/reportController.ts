@@ -14,7 +14,8 @@ export const getExpiringProductsReport = async (req: Request, res: Response) => 
                     lte: sixtyDaysFromNow,
                     gte: today
                 },
-                cantidad: { gt: 0 }
+                cantidad: { gt: 0 },
+                activo: true
             },
             include: {
                 producto: {
@@ -42,7 +43,8 @@ export const getExpiredProductsReport = async (req: Request, res: Response) => {
 
         const expiredBatches = await prisma.lote.findMany({
             where: {
-                fechaVencimiento: { lt: today }
+                fechaVencimiento: { lt: today },
+                activo: true
             },
             include: {
                 producto: {
@@ -67,6 +69,9 @@ export const getExpiredProductsReport = async (req: Request, res: Response) => {
 export const getStockReport = async (req: Request, res: Response) => {
     try {
         const stockData = await prisma.inventario.findMany({
+            where: {
+                producto: { activo: true }
+            },
             include: {
                 producto: {
                     select: { nombre: true, precio: true, requiereReceta: true }
