@@ -3,7 +3,8 @@ import {
     getExpiringProductsReport,
     getExpiredProductsReport,
     getStockReport,
-    getSalesReport
+    getSalesReport,
+    getSalesByProductReport
 } from '../controllers/reportController';
 import { authenticateToken, authorizeRole } from '../middleware/authMiddleware';
 
@@ -17,5 +18,6 @@ router.get('/expiring', getExpiringProductsReport);
 router.get('/expired', getExpiredProductsReport);
 router.get('/stock', getStockReport);
 router.get('/sales-summary', getSalesReport);
+router.get('/sales-by-product', getSalesByProductReport);
 
 export default router;

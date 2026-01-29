@@ -137,3 +137,50 @@ export const getSalesReport = async (req: Request, res: Response) => {
         res.status(500).json({ success: false, error: error.message });
     }
 };
+
+// 5. Reporte detallado de ventas por producto
+export const getSalesByProductReport = async (req: Request, res: Response) => {
+    try {
+        const productSales = await prisma.detalleVenta.groupBy({
+            by: ['idProducto'],
+            _sum: {
+                cantidad: true,
+                subtotal: true
+            },
+            orderBy: {
+                _sum: {
+                    subtotal: 'desc'
+                }
+            }
+        });
+
+        const enrichedData = await Promise.all(productSales.map(async (item: any) => {
+            const product = await prisma.producto.findUnique({
+                where: { id: item.idProducto },
+                select: {
+                    nombre: true,
+                    precio: true,
+                    categoria: { select: { nombre: true } }
+                }
+            });
+
+            return {
+                idProducto: item.idProducto,
+                nombre: product?.nombre || 'Desconocido',
+                categoria: product?.categoria?.nombre || 'Sin categoría',
+                precioActual: product?.precio || 0,
+                cantidadTotal: item._sum.cantidad || 0,
+                ingresosTotales: item._sum.subtotal || 0
+            };
+        }));
+
+        res.json({
+            success: true,
+            title: 'Ventas Detalladas por Producto',
+            count: enrichedData.length,
+            data: enrichedData
+        });
+    } catch (error: any) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
