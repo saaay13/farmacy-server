@@ -11,7 +11,7 @@ const router = Router();
 
 // Todos los reportes están protegidos para roles Administrativos/Farmacéuticos
 router.use(authenticateToken);
-router.use(authorizeRole(['admin', 'farmaceutico']));
+router.use(authorizeRole(['admin', 'farmaceutico', 'vendedor']));
 
 router.get('/expiring', getExpiringProductsReport);
 router.get('/expired', getExpiredProductsReport);

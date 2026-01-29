@@ -85,31 +85,43 @@ export const createUser = async (req: Request, res: Response) => {
     }
 };
 
-// Actualizar usuario completo (Protección: No-admin solo actualiza clientes)
+// Actualizar usuario completo (Protección: No-admin solo actualiza clientes o A SÍ MISMO)
 export const updateUser = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { nombre, email, rol, avatarUrl } = req.body;
+        const { nombre, email, rol, avatarUrl, password } = req.body;
         const requesterRole = (req as any).user.rol;
+        const requesterId = (req as any).user.id;
 
         const targetUser = await prisma.usuario.findUnique({ where: { id: String(id) } });
         if (!targetUser) return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
 
         // Lógica de seguridad
-        if (requesterRole !== 'admin') {
+        const isSelfUpdate = requesterId === id;
+
+        if (requesterRole !== 'admin' && !isSelfUpdate) {
             if (targetUser.rol !== 'cliente') {
                 return res.status(403).json({ success: false, message: 'No puedes editar perfiles de personal' });
             }
         }
 
+        const updateData: any = {
+            nombre,
+            email,
+            avatarUrl,
+            // Solo admin puede cambiar roles. Si es self-update, mantiene su rol original.
+            rol: requesterRole === 'admin' && !isSelfUpdate ? rol : targetUser.rol
+        };
+
+        // Si se envía password, hashearlo
+        if (password && password.trim() !== '') {
+            const bcrypt = require('bcryptjs'); // Lazy load or import at top if possible
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
         const updatedUser = await prisma.usuario.update({
             where: { id: String(id) },
-            data: {
-                nombre,
-                email,
-                rol: requesterRole === 'admin' ? rol : targetUser.rol, // Vendedor no cambia roles
-                avatarUrl
-            },
+            data: updateData,
             select: { id: true, nombre: true, email: true, rol: true, avatarUrl: true }
         });
 
