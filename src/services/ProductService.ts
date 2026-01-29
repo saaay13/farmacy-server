@@ -9,7 +9,7 @@ export class ProductService {
         const sixtyDaysFromNow = new Date();
         sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-        return await prisma.producto.findMany({
+        const results = await prisma.producto.findMany({
             where: {
                 nombre: nombre ? { contains: String(nombre), mode: 'insensitive' } : undefined,
                 idCategoria: idCategoria ? String(idCategoria) : undefined,
@@ -17,12 +17,33 @@ export class ProductService {
 
                 // Reglas de Visibilidad (Refactorizadas)
                 AND: (userRole === 'cliente' || userRole === 'guest') ? [
-                    { requiereReceta: false },
-                    { estado: 'activo' },
+                    // { requiereReceta: false }, // PERMITIMOS ver productos con receta (Fase 6)
                     {
-                        NOT: {
-                            lotes: {
-                                some: { fechaVencimiento: { lte: sixtyDaysFromNow } }
+                        // Permitir productos activos O productos en promoción aprobada
+                        OR: [
+                            { estado: 'activo' },
+                            {
+                                // Productos con promoción aprobada y vigente
+                                AND: [
+                                    { estado: 'promocion' },
+                                    {
+                                        promociones: {
+                                            some: {
+                                                aprobada: true,
+                                                fechaInicio: { lte: new Date(new Date().setHours(23, 59, 59, 999)) },
+                                                fechaFin: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        // Visibilidad: Mostrar productos con al menos un lote vigente (incluyendo hoy)
+                        lotes: {
+                            some: {
+                                fechaVencimiento: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                             }
                         }
                     }
@@ -30,10 +51,21 @@ export class ProductService {
             },
             include: {
                 categoria: true,
-                lotes: userRole !== 'cliente' && userRole !== 'guest' // Detalle de lotes solo staff
+                lotes: userRole !== 'cliente' && userRole !== 'guest', // Detalle de lotes solo staff
+                inventario: userRole !== 'cliente' && userRole !== 'guest', // Stock total solo staff
+                promociones: {
+                    where: {
+                        aprobada: true,
+                        // Normalizar a medianoche para comparación de fechas
+                        fechaInicio: { lte: new Date(new Date().setHours(23, 59, 59, 999)) }, // Comenzó hoy o antes
+                        fechaFin: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } // Termina hoy o después
+                    }
+                }
             },
             orderBy: { nombre: 'asc' }
         });
+
+        return results;
     }
 
     /**

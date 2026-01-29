@@ -88,7 +88,10 @@ El servidor estará disponible en `http://localhost:3001`
 | **Logística** | CRUD Total | Ver Reportes | Sin acceso | Sin acceso |
 
 > [!NOTE]
-> * **Privacidad de Clientes**: Filtrado automático de medicamentos con receta y productos próximos a vencer.
+> * **Privacidad de Clientes**: Filtrado automático de:
+>   - Medicamentos con receta (se muestran con advertencia informativa)
+>   - Productos próximos a vencer **SIN** promoción aprobada
+>   - Productos con **promociones aprobadas SÍ son visibles** (para incentivar ventas antes del vencimiento)
 
 ---
 

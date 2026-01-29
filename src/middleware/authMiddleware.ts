@@ -33,3 +33,19 @@ export const authorizeRole = (roles: string[]) => {
         next();
     };
 };
+// Middleware para rutas que pueden ser públicas pero que cambian según el rol si hay sesión
+export const optionalAuthenticate = (req: AuthRequest, _res: Response, next: NextFunction) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return next();
+    }
+
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+        if (!err) {
+            req.user = user;
+        }
+        next();
+    });
+};

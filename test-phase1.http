@@ -8,10 +8,10 @@ POST {{baseUrl}}/auth/register
 Content-Type: application/json
 
 {
-    "nombre": "Farmaceutico",
-    "email": "farmaceutico@farmacia.com",
+    "nombre": "Key",
+    "email": "key@farmacia.com",
     "password": "password123",
-    "rol": "farmaceutico"
+    "rol": "admin"
 }
 
 ### 2. LOGIN (Obtener Token)
@@ -20,8 +20,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-    "email": "farmaceutico@farmacia.com",
-    "password": "password123"
+    "email": "pau@gmail.com",
+    "password": "123456"
 }
 
 ### 2. LISTAR PRODUCTOS (COMO INVITADO)

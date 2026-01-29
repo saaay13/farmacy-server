@@ -6,6 +6,15 @@ import { PromocionModel } from '../models/Promocion';
 export const getPromotions = async (req: Request, res: Response) => {
     try {
         const { aprobada } = req.query;
+        const userRole = (req as any).user?.rol || 'guest';
+
+        // Validación de acceso: Clientes/guests solo pueden ver promociones aprobadas
+        if ((userRole === 'cliente' || userRole === 'guest') && aprobada !== 'true') {
+            return res.status(403).json({
+                success: false,
+                message: 'Acceso denegado: Solo puede ver promociones aprobadas'
+            });
+        }
 
         const promotions = await prisma.promocion.findMany({
             where: {

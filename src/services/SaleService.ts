@@ -41,7 +41,17 @@ export class SaleService {
                     throw new Error(`Stock insuficiente para ${productObj.nombre}.`);
                 }
 
-                // 3. Lógica FIFO y Vencimiento con Modelo Lote
+                // 3. Obtener promociones activas del producto
+                const promociones = await tx.promocion.findMany({
+                    where: {
+                        idProducto,
+                        aprobada: true,
+                        fechaInicio: { lte: new Date() },
+                        fechaFin: { gte: new Date() }
+                    }
+                });
+
+                // 4. Lógica FIFO con Precios por Lote
                 let cantidadRestante = cantidad;
                 const lotesData = await tx.lote.findMany({
                     where: { idProducto },
@@ -59,30 +69,46 @@ export class SaleService {
                     }
 
                     const cantidadADescontar = Math.min(loteObj.cantidad, cantidadRestante);
-                    await tx.lote.update({
-                        where: { id: loteObj.id },
-                        data: { cantidad: loteObj.cantidad - cantidadADescontar }
+
+                    // Determinar si este lote tiene promoción aplicable
+                    const tienePromocion = loteObj.estaProximoAVencer(60) && promociones.length > 0;
+                    const descuento = tienePromocion ? Number(promociones[0].porcentajeDescuento) : 0;
+                    const precioUnitario = productObj.calcularPrecioFinal(descuento);
+                    const subtotalLote = precioUnitario * cantidadADescontar;
+
+                    // Actualizar o eliminar lote
+                    const nuevaCantidad = loteObj.cantidad - cantidadADescontar;
+                    if (nuevaCantidad === 0) {
+                        // Eliminar lote si se agota completamente
+                        await tx.lote.delete({
+                            where: { id: loteObj.id }
+                        });
+                    } else {
+                        // Actualizar cantidad si aún quedan unidades
+                        await tx.lote.update({
+                            where: { id: loteObj.id },
+                            data: { cantidad: nuevaCantidad }
+                        });
+                    }
+
+                    // Crear detalle de venta separado por lote (cuando hay diferencia de precio)
+                    saleDetailsData.push({
+                        idProducto,
+                        cantidad: cantidadADescontar,
+                        precioUnitario,
+                        subtotal: subtotalLote
                     });
+
+                    totalVenta += subtotalLote;
                     cantidadRestante -= cantidadADescontar;
                 }
 
                 if (cantidadRestante > 0) throw new Error(`Stock real inconsistente para ${productObj.nombre}`);
 
-                // 4. Actualizar Inventario
+                // 5. Actualizar Inventario
                 await tx.inventario.update({
                     where: { idProducto },
                     data: { stockTotal: { decrement: cantidad }, fechaRevision: new Date() }
-                });
-
-                // 5. Acumular Detalle
-                const subtotal = productObj.calcularPrecioFinal() * cantidad;
-                totalVenta += subtotal;
-
-                saleDetailsData.push({
-                    idProducto,
-                    cantidad,
-                    precioUnitario: productData.precio,
-                    subtotal
                 });
             }
 

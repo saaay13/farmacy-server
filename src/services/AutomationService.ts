@@ -63,16 +63,26 @@ export class AutomationService {
             });
 
             for (const lote of expiringLots) {
-                // 1. Crear Alerta Visual
-                await prisma.alerta.create({
-                    data: {
-                        tipo: 'expirado', // Valor permitido por el CHECK constraint
-                        mensaje: `El producto ${lote.producto.nombre} (Lote: ${lote.numeroLote}) vence el ${lote.fechaVencimiento.toLocaleDateString()}`,
-                        fecha: new Date(),
+                // 1. Verificar si ya existe alerta hoy para este producto
+                const existingAlert = await prisma.alerta.findFirst({
+                    where: {
                         idProducto: lote.idProducto,
-                        idUsuario: 'u-1' // Asignado por defecto al Admin/Sistema
+                        tipo: 'expirado',
+                        mensaje: { contains: lote.numeroLote } // Evitar duplicar por mismo lote
                     }
                 });
+
+                if (!existingAlert) {
+                    await prisma.alerta.create({
+                        data: {
+                            tipo: 'expirado',
+                            mensaje: `El producto ${lote.producto.nombre} (Lote: ${lote.numeroLote}) vence el ${lote.fechaVencimiento.toLocaleDateString()}`,
+                            fecha: new Date(),
+                            idProducto: lote.idProducto,
+                            idUsuario: 'u-1'
+                        }
+                    });
+                }
 
                 // 2. Crear Promoción Automática (15% descuento)
                 // Verificamos si ya existe una promoción activa para este producto

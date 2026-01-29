@@ -23,6 +23,7 @@ create table farmacy.usuario (
     email varchar not null,
     rol varchar not null,
     avatar_url varchar,
+    password varchar not null default '123456',
     constraint pk_usuario primary key (id),
     constraint uq_usuario_email unique (email),
     constraint ck_usuario_rol check (rol in ('admin','farmaceutico','vendedor','cliente'))

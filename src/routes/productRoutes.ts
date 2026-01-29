@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { getProducts, getProductById, createProduct, updateProduct, deleteProduct } from '../controllers/productController';
-import { authenticateToken, authorizeRole } from '../middleware/authMiddleware';
+import { authenticateToken, authorizeRole, optionalAuthenticate } from '../middleware/authMiddleware';
 
 const router = Router();
 
-// Rutas públicas (Listado y Detalle)
-router.get('/', getProducts);
-router.get('/:id', getProductById);
+// Rutas públicas pero sensibles al rol (Listado y Detalle)
+router.get('/', optionalAuthenticate, getProducts);
+router.get('/:id', optionalAuthenticate, getProductById);
 
 // Rutas protegidas (Solo Admin y Farmacéutico pueden modificar productos)
 router.post('/', authenticateToken, authorizeRole(['admin', 'farmaceutico']), createProduct);

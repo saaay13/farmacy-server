@@ -8,7 +8,11 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret_key_change_me_in_prod';
 
 export const register = async (req: Request, res: Response) => {
     try {
-        const { nombre, email, password, rol } = req.body;
+        const { nombre, email, password, avatarUrl } = req.body;
+
+        if (!nombre || !email || !password) {
+            return res.status(400).json({ status: 'error', message: 'Faltan campos obligatorios' });
+        }
 
         // Check if user exists
         const existingUser = await prisma.usuario.findUnique({ where: { email } });
@@ -19,13 +23,14 @@ export const register = async (req: Request, res: Response) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user
+        // Create user - Siempre con rol 'cliente' para registros públicos
         const user = await prisma.usuario.create({
             data: {
                 nombre,
                 email,
                 password: hashedPassword,
-                rol // admin, farmaceutico, vendedor, cliente
+                rol: 'cliente',
+                avatarUrl: avatarUrl || null
             }
         });
 
@@ -78,6 +83,7 @@ export const login = async (req: Request, res: Response) => {
                 email: userObj.email,
                 rol: userObj.getRol(),
                 nombre: userObj.nombre,
+                avatarUrl: userObj.avatarUrl,
                 esAdmin: userObj.esAdmin()
             }
         });

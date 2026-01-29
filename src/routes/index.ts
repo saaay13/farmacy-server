@@ -10,9 +10,11 @@ import reportRoutes from './reportRoutes';
 import authRoutes from './authRoutes';
 import logisticsRoutes from './logisticsRoutes';
 import banchRoutes from './banchRoutes';
+import userRoutes from './userRoutes';
 const router = Router();
 
 router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/products', productRoutes);
 router.use('/batches', batchRoutes);

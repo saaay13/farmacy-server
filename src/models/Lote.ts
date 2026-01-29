@@ -13,10 +13,18 @@ export class LoteModel {
         this.numeroLote = numeroLote;
     }
 
-    // Lógica de negocio encapsulada: Verificar si el lote está vencido
+    // Lógica de negocio    // Método Público: Verificar si está vencido
     public estaVencido(): boolean {
-        const today = new Date();
-        return this.fechaVencimiento < today;
+        const hoy = new Date();
+        return this.fechaVencimiento < hoy;
+    }
+
+    // Método Público: Verificar si está próximo a vencer
+    public estaProximoAVencer(dias: number = 60): boolean {
+        const hoy = new Date();
+        const limite = new Date();
+        limite.setDate(limite.getDate() + dias);
+        return this.fechaVencimiento <= limite && !this.estaVencido();
     }
 
     // Verificar si vence en los próximos X días (ej. 60)
