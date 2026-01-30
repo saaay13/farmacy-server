@@ -7,14 +7,12 @@ export class ProductService {
         const sixtyDaysFromNow = new Date();
         sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-        const results = await prisma.producto.findMany({
+        const products = await prisma.producto.findMany({
             where: {
                 nombre: nombre ? { contains: String(nombre), mode: 'insensitive' } : undefined,
                 idCategoria: idCategoria ? String(idCategoria) : undefined,
                 estado: estado ? String(estado) : undefined,
                 activo: String(includeDeactivated) === 'true' ? undefined : true,
-
-                // Reglas de visibilidad
                 AND: (userRole === 'cliente' || userRole === 'guest') ? [
                     {
                         OR: [
@@ -26,6 +24,7 @@ export class ProductService {
                                         promociones: {
                                             some: {
                                                 aprobada: true,
+                                                activo: true,
                                                 fechaInicio: { lte: new Date(new Date().setHours(23, 59, 59, 999)) },
                                                 fechaFin: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                                             }
@@ -38,7 +37,7 @@ export class ProductService {
                     {
                         lotes: {
                             some: {
-                                fechaVencimiento: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+                                fechaVencimiento: { gt: new Date() },
                                 idSucursal: idSucursal ? String(idSucursal) : undefined
                             }
                         }
@@ -47,16 +46,21 @@ export class ProductService {
             },
             include: {
                 categoria: true,
-                lotes: (userRole !== 'cliente' && userRole !== 'guest') ? {
-                    where: idSucursal ? { idSucursal: String(idSucursal) } : undefined,
+                lotes: {
+                    where: {
+                        fechaVencimiento: { gt: new Date() },
+                        activo: true,
+                        idSucursal: idSucursal ? String(idSucursal) : undefined
+                    },
                     orderBy: { fechaVencimiento: 'asc' }
-                } : false,
-                inventarios: (userRole !== 'cliente' && userRole !== 'guest') ? {
+                },
+                inventarios: {
                     where: idSucursal ? { idSucursal: String(idSucursal) } : undefined
-                } : false,
+                },
                 promociones: {
                     where: {
                         aprobada: true,
+                        activo: true,
                         fechaInicio: { lte: new Date(new Date().setHours(23, 59, 59, 999)) },
                         fechaFin: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                     }
@@ -65,22 +69,81 @@ export class ProductService {
             orderBy: { nombre: 'asc' }
         });
 
+        // --- REGLA DE NEGOCIO: FILTRAR STOCK REAL SEGÚN REGLA "PROMO O BLOQUEO" ---
+        // sixtyDaysFromNow ya está definida arriba
+
+        const results = products.map(product => {
+            const tienePromoActiva = product.estado === 'promocion' && product.promociones.length > 0;
+
+            // Filtrar los lotes que realmente son vendibles
+            const lotesVendibles = product.lotes.filter(lote => {
+                const fechaVenc = new Date(lote.fechaVencimiento);
+                const estaProximo = fechaVenc <= sixtyDaysFromNow;
+
+                // Si está próximo, solo es vendible si hay promo
+                if (estaProximo) {
+                    return tienePromoActiva;
+                }
+                // Si está bien (más de 60 días), es vendible
+                return true;
+            });
+
+            // Recalcular el stock disponible basado solo en lotes vendibles
+            const stockReal = lotesVendibles.reduce((acc, l) => acc + l.cantidad, 0);
+
+            return {
+                ...product,
+                lotes: userRole === 'cliente' || userRole === 'guest' ? undefined : lotesVendibles,
+                stockDisponible: stockReal, // Campo virtual para el frontend
+                inventarios: product.inventarios.map(inv => ({
+                    ...inv,
+                    stockTotal: stockReal // Sincronizamos el stock mostrado con la realidad de los lotes vendibles
+                }))
+            };
+        });
+
+        // REGLA: Si el usuario es cliente/guest, ocultar productos que al final quedaron con stock 0 
+        // (porque todos sus lotes estaban próximos y NO tenían promo)
+        if (userRole === 'cliente' || userRole === 'guest') {
+            return results.filter(p => p.stockDisponible > 0);
+        }
+
         return results;
     }
 
-    // Validar visibilidad
+    // Validar visibilidad (usado en detalles o búsquedas directas)
     public static isProductVisible(product: any, userRole: string): boolean {
-        if (userRole === 'admin' || userRole === 'farmaceutico') return true;
+        // Roles internos ven todo
+        if (userRole === 'admin' || userRole === 'farmaceutico' || userRole === 'vendedor') return true;
 
+        // Reglas para Clientes/Guests
+
+        // 1. Estado inválido (debe ser activo o promocion con promo vigente)
+        const tienePromoActiva = product.estado === 'promocion' && product.promociones?.some((p: any) => {
+            const now = new Date();
+            return p.aprobada && p.activo && new Date(p.fechaInicio) <= now && new Date(p.fechaFin) >= now;
+        });
+
+        if (product.estado !== 'activo' && !tienePromoActiva) return false;
+
+        // 2. Verificar si tiene stock vendible
         const sixtyDaysFromNow = new Date();
         sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-        if (product.requiereReceta) return false;
-        if (product.estado !== 'activo') return false;
+        const hasVendibleStock = product.lotes?.some((l: any) => {
+            const fechaVenc = new Date(l.fechaVencimiento);
+            const estaProximo = fechaVenc <= sixtyDaysFromNow;
+            const noVencido = fechaVenc > new Date();
 
-        const hasExpiringBatch = product.lotes?.some((l: any) => new Date(l.fechaVencimiento) <= sixtyDaysFromNow);
-        if (hasExpiringBatch) return false;
+            if (!noVencido) return false;
 
-        return true;
+            // Si está próximo, solo es vendible si hay promo activa
+            if (estaProximo) {
+                return tienePromoActiva;
+            }
+            return true;
+        });
+
+        return !!hasVendibleStock;
     }
 }

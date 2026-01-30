@@ -25,7 +25,7 @@ export const getProductById = async (req: Request, res: Response) => {
 
         const productData = await prisma.producto.findUnique({
             where: { id: String(id) },
-            include: { categoria: true, lotes: true, inventarios: true }
+            include: { categoria: true, lotes: true, inventarios: true, promociones: true }
         });
 
         if (!productData) return res.status(404).json({ success: false, message: 'Producto no encontrado' });

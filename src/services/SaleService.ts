@@ -135,9 +135,18 @@ export class SaleService {
 
                     const cantidadADescontar = Math.min(loteObj.cantidad, cantidadRestante);
 
-                    // Determinar si este lote tiene promoción aplicable
-                    const tienePromocion = loteObj.estaProximoAVencer(60) && promociones.length > 0;
-                    const descuento = tienePromocion ? Number(promociones[0].porcentajeDescuento) : 0;
+                    // --- NUEVA REGLA DE NEGOCIO: PROMO O BLOQUEO PARA PRÓXIMOS A VENCER ---
+                    const estaProximo = loteObj.estaProximoAVencer(60);
+                    const tienePromocionActiva = productData.estado === 'promocion' && promociones.length > 0;
+
+                    if (estaProximo && !tienePromocionActiva) {
+                        // Si está próximo a vencer pero NO hay promoción aprobada para el producto, este lote NO se vende.
+                        // Saltamos al siguiente lote.
+                        continue;
+                    }
+
+                    // Determinar descuento: solo si está en promoción (que ahora es condición para vender si está próximo)
+                    const descuento = tienePromocionActiva ? Number(promociones[0].porcentajeDescuento) : 0;
                     const precioUnitario = productObj.calcularPrecioFinal(descuento);
                     const subtotalLote = precioUnitario * cantidadADescontar;
 

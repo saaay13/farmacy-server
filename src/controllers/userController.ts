@@ -18,7 +18,14 @@ export const getUsers = async (req: Request, res: Response) => {
                 email: true,
                 rol: true,
                 avatarUrl: true,
-                activo: true
+                activo: true,
+                idSucursal: true,
+                sucursal: {
+                    select: {
+                        idSucursal: true,
+                        nombre: true
+                    }
+                }
             },
             orderBy: { nombre: 'asc' }
         });
@@ -77,9 +84,19 @@ export const createUser = async (req: Request, res: Response) => {
                 nombre,
                 email,
                 password: password || '123456',
-                rol: finalRol
+                rol: finalRol,
+                idSucursal: req.body.idSucursal || 's-1'
             },
-            select: { id: true, nombre: true, email: true, rol: true }
+            select: {
+                id: true,
+                nombre: true,
+                email: true,
+                rol: true,
+                idSucursal: true,
+                sucursal: {
+                    select: { idSucursal: true, nombre: true }
+                }
+            }
         });
 
         res.status(201).json({ success: true, data: newUser });
@@ -112,6 +129,7 @@ export const updateUser = async (req: Request, res: Response) => {
             nombre,
             email,
             avatarUrl,
+            idSucursal: req.body.idSucursal,
             // Asignación de rol
             rol: requesterRole === 'admin' && !isSelfUpdate ? rol : targetUser.rol
         };
@@ -125,7 +143,17 @@ export const updateUser = async (req: Request, res: Response) => {
         const updatedUser = await prisma.usuario.update({
             where: { id: String(id) },
             data: updateData,
-            select: { id: true, nombre: true, email: true, rol: true, avatarUrl: true }
+            select: {
+                id: true,
+                nombre: true,
+                email: true,
+                rol: true,
+                avatarUrl: true,
+                idSucursal: true,
+                sucursal: {
+                    select: { idSucursal: true, nombre: true }
+                }
+            }
         });
 
         res.json({ success: true, data: updatedUser });

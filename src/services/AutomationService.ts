@@ -20,7 +20,7 @@ export class AutomationService {
             await this.generateExpiryAndStockAlerts();
         });
 
-        // Ejecución inmediata al iniciar para demostración
+        // Ejecución inmediata al iniciar
         this.performThursdayInventoryCheck();
         this.generateExpiryAndStockAlerts();
     }
