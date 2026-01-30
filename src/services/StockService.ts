@@ -8,6 +8,7 @@ export class StockService {
             const newBatch = await tx.lote.create({
                 data: {
                     idProducto: datos.idProducto,
+                    idSucursal: datos.idSucursal,
                     fechaVencimiento: new Date(datos.fechaVencimiento),
                     cantidad: Number(datos.cantidad),
                     numeroLote: datos.numeroLote
@@ -20,14 +21,28 @@ export class StockService {
                 newBatch.idProducto,
                 newBatch.fechaVencimiento,
                 newBatch.cantidad,
-                newBatch.numeroLote
+                newBatch.numeroLote,
+                newBatch.idSucursal
             );
 
             // Actualizar inventario
-            const inventory = await tx.inventario.findUnique({ where: { idProducto: datos.idProducto } });
+            const inventory = await tx.inventario.findUnique({
+                where: {
+                    idProducto_idSucursal: {
+                        idProducto: datos.idProducto,
+                        idSucursal: datos.idSucursal
+                    }
+                }
+            });
+
             if (inventory) {
                 await tx.inventario.update({
-                    where: { idProducto: datos.idProducto },
+                    where: {
+                        idProducto_idSucursal: {
+                            idProducto: datos.idProducto,
+                            idSucursal: datos.idSucursal
+                        }
+                    },
                     data: { stockTotal: inventory.stockTotal + loteObj.cantidad, fechaRevision: new Date() }
                 });
             } else {
@@ -51,7 +66,7 @@ export class StockService {
         });
         // Lógica de modelo
         return lotes
-            .map((l: any) => new LoteModel(l.id, l.idProducto, l.fechaVencimiento, l.cantidad, l.numeroLote))
+            .map((l: any) => new LoteModel(l.id, l.idProducto, l.fechaVencimiento, l.cantidad, l.numeroLote, l.idSucursal))
             .filter((l: LoteModel) => l.estaVencido());
     }
 }

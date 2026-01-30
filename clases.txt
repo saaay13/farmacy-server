@@ -1,5 +1,11 @@
+-- ==========================================================
+-- ESQUEMA DE BASE DE DATOS - FARMACY APP (POSTGRESQL)
+-- Versión Actualizada: 2026-01-29
+-- ==========================================================
+
 create schema if not exists farmacy;
 
+-- SECUENCIAS
 create sequence farmacy.sec_categoria start 1 increment 1;
 create sequence farmacy.sec_producto start 1 increment 1;
 create sequence farmacy.sec_lote start 1 increment 1;
@@ -9,12 +15,24 @@ create sequence farmacy.sec_detalle_venta start 1 increment 1;
 create sequence farmacy.sec_promocion start 1 increment 1;
 create sequence farmacy.sec_alerta start 1 increment 1;
 create sequence farmacy.sec_sucursal start 1 increment 1;
+create sequence farmacy.sec_intento_bloqueado start 1 increment 1;
+
+-- TABLAS PRINCIPALES
 
 create table farmacy.categoria (
     id varchar default ('c-' || nextval('farmacy.sec_categoria')),
     nombre varchar not null,
+    activo boolean default true,
     constraint pk_categoria primary key (id),
     constraint uq_categoria_nombre unique (nombre)
+);
+
+create table farmacy.sucursal (
+    id_sucursal varchar default ('s-' || nextval('farmacy.sec_sucursal')),
+    nombre varchar not null,
+    direccion varchar not null,
+    activo boolean default true,
+    constraint pk_sucursal primary key (id_sucursal)
 );
 
 create table farmacy.usuario (
@@ -24,18 +42,13 @@ create table farmacy.usuario (
     rol varchar not null,
     avatar_url varchar,
     password varchar not null default '123456',
+    activo boolean default true,
+    id_sucursal varchar,
     constraint pk_usuario primary key (id),
     constraint uq_usuario_email unique (email),
-    constraint ck_usuario_rol check (rol in ('admin','farmaceutico','vendedor','cliente'))
+    constraint ck_usuario_rol check (rol in ('admin','farmaceutico','vendedor','cliente','guest')),
+    constraint fk_usuario_sucursal foreign key (id_sucursal) references farmacy.sucursal(id_sucursal)
 );
-
-create table farmacy.sucursal (
-    id_sucursal varchar default ('s-' || nextval('farmacy.sec_sucursal')),
-    nombre varchar not null,
-    direccion varchar not null,
-    constraint pk_sucursal primary key (id_sucursal)
-);
-
 
 create table farmacy.producto (
     id varchar default ('p-' || nextval('farmacy.sec_producto')),
@@ -46,6 +59,7 @@ create table farmacy.producto (
     estado varchar not null,
     id_categoria varchar not null,
     image_url varchar,
+    activo boolean default true,
     constraint pk_producto primary key (id),
     constraint ck_producto_precio check (precio > 0),
     constraint ck_producto_estado check (estado in ('activo','expirado','stock_bajo','promocion')),
@@ -53,11 +67,11 @@ create table farmacy.producto (
 );
 
 create table farmacy.inventario (
-    id_producto varchar,
+    id_producto varchar not null,
     id_sucursal varchar not null,
     stock_total integer not null,
     fecha_revision date not null,
-    constraint pk_inventario primary key (id_producto),
+    constraint pk_inventario primary key (id_producto, id_sucursal), -- CLAVE COMPUESTA
     constraint ck_inventario_stock check (stock_total >= 0),
     constraint fk_inventario_producto foreign key (id_producto) references farmacy.producto(id),
     constraint fk_inventario_sucursal foreign key (id_sucursal) references farmacy.sucursal(id_sucursal)
@@ -66,12 +80,15 @@ create table farmacy.inventario (
 create table farmacy.lote (
     id varchar default ('l-' || nextval('farmacy.sec_lote')),
     id_producto varchar not null,
+    id_sucursal varchar,
     fecha_vencimiento date not null,
     cantidad integer not null,
     numero_lote varchar not null,
+    activo boolean default true,
     constraint pk_lote primary key (id),
-    constraint ck_lote_cantidad check (cantidad > 0),
-    constraint fk_lote_producto foreign key (id_producto) references farmacy.producto(id)
+    constraint ck_lote_cantidad check (cantidad >= 0),
+    constraint fk_lote_producto foreign key (id_producto) references farmacy.producto(id),
+    constraint fk_lote_sucursal foreign key (id_sucursal) references farmacy.sucursal(id_sucursal)
 );
 
 create table farmacy.promocion (
@@ -81,6 +98,7 @@ create table farmacy.promocion (
     fecha_inicio date not null,
     fecha_fin date not null,
     aprobada boolean not null,
+    activo boolean default true,
     constraint pk_promocion primary key (id),
     constraint ck_promocion_descuento check (porcentaje_descuento > 0 and porcentaje_descuento <= 100),
     constraint ck_promocion_fechas check (fecha_inicio <= fecha_fin),
@@ -104,6 +122,7 @@ create table farmacy.detalle_venta (
     id varchar default ('dv-' || nextval('farmacy.sec_detalle_venta')),
     id_venta varchar not null,
     id_producto varchar not null,
+    id_lote varchar,
     cantidad integer not null,
     precio_unitario numeric(10,2) not null,
     subtotal numeric(10,2) not null,
@@ -111,10 +130,9 @@ create table farmacy.detalle_venta (
     constraint ck_detalle_cantidad check (cantidad > 0),
     constraint ck_detalle_precio check (precio_unitario > 0),
     constraint ck_detalle_subtotal check (subtotal >= 0),
-    constraint fk_detalle_venta foreign key (id_venta)
-        references farmacy.venta(id),
-    constraint fk_detalle_producto foreign key (id_producto)
-        references farmacy.producto(id)
+    constraint fk_detalle_venta foreign key (id_venta) references farmacy.venta(id),
+    constraint fk_detalle_producto foreign key (id_producto) references farmacy.producto(id),
+    constraint fk_detalle_lote foreign key (id_lote) references farmacy.lote(id)
 );
 
 create table farmacy.alerta (
@@ -125,12 +143,30 @@ create table farmacy.alerta (
     id_producto varchar,
     id_usuario varchar not null,
     constraint pk_alerta primary key (id),
-    constraint ck_alerta_tipo check (tipo in ('expirado','stock_bajo','sugerencia_promocion')),
     constraint fk_alerta_producto foreign key (id_producto) references farmacy.producto(id),
     constraint fk_alerta_usuario foreign key (id_usuario) references farmacy.usuario(id)
 );
 
-create role admin;
-create role farmaceutico;
-create role vendedor;
-create role cliente;
+create table farmacy.intento_bloqueado (
+    id varchar default ('ib-' || nextval('farmacy.sec_intento_bloqueado')),
+    id_vendedor varchar not null,
+    id_cliente varchar,
+    fecha timestamp default now(),
+    motivo varchar not null,
+    id_producto varchar not null,
+    id_lote varchar,
+    cantidad_intento integer not null,
+    mensaje text not null,
+    constraint pk_intento_bloqueado primary key (id),
+    constraint fk_intento_vendedor foreign key (id_vendedor) references farmacy.usuario(id),
+    constraint fk_intento_cliente foreign key (id_cliente) references farmacy.usuario(id),
+    constraint fk_intento_producto foreign key (id_producto) references farmacy.producto(id),
+    constraint fk_intento_lote foreign key (id_lote) references farmacy.lote(id)
+);
+
+-- ROLES
+-- create role admin;
+-- create role farmaceutico;
+-- create role vendedor;
+-- create role cliente;
+-- create role guest;

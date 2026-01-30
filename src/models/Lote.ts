@@ -4,13 +4,15 @@ export class LoteModel {
     public fechaVencimiento: Date;
     public cantidad: number;
     public numeroLote: string;
+    public idSucursal: string | null;
 
-    constructor(id: string, idProducto: string, fechaVencimiento: Date, cantidad: number, numeroLote: string) {
+    constructor(id: string, idProducto: string, fechaVencimiento: Date, cantidad: number, numeroLote: string, idSucursal: string | null = null) {
         this.id = id;
         this.idProducto = idProducto;
         this.fechaVencimiento = new Date(fechaVencimiento);
         this.cantidad = cantidad;
         this.numeroLote = numeroLote;
+        this.idSucursal = idSucursal;
     }
 
     // Lógica de negocio    // Método Público: Verificar si está vencido

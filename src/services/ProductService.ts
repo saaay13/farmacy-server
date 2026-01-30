@@ -3,7 +3,7 @@ import prisma from '../config/prisma';
 export class ProductService {
     // Obtener productos filtrados
     public static async getFilteredProducts(filters: any, userRole: string) {
-        const { nombre, idCategoria, estado, includeDeactivated } = filters;
+        const { nombre, idCategoria, estado, includeDeactivated, idSucursal } = filters;
         const sixtyDaysFromNow = new Date();
         sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
@@ -16,13 +16,10 @@ export class ProductService {
 
                 // Reglas de visibilidad
                 AND: (userRole === 'cliente' || userRole === 'guest') ? [
-                    // { requiereReceta: false }, // PERMITIMOS ver productos con receta (Fase 6)
                     {
-                        // Permitir productos activos O productos en promoción aprobada
                         OR: [
                             { estado: 'activo' },
                             {
-                                // Productos con promoción aprobada y vigente
                                 AND: [
                                     { estado: 'promocion' },
                                     {
@@ -39,10 +36,10 @@ export class ProductService {
                         ]
                     },
                     {
-                        // Visibilidad: Mostrar productos con al menos un lote vigente (incluyendo hoy)
                         lotes: {
                             some: {
-                                fechaVencimiento: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+                                fechaVencimiento: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+                                idSucursal: idSucursal ? String(idSucursal) : undefined
                             }
                         }
                     }
@@ -50,14 +47,18 @@ export class ProductService {
             },
             include: {
                 categoria: true,
-                lotes: userRole !== 'cliente' && userRole !== 'guest', // Detalle de lotes solo staff
-                inventario: userRole !== 'cliente' && userRole !== 'guest', // Stock total solo staff
+                lotes: (userRole !== 'cliente' && userRole !== 'guest') ? {
+                    where: idSucursal ? { idSucursal: String(idSucursal) } : undefined,
+                    orderBy: { fechaVencimiento: 'asc' }
+                } : false,
+                inventarios: (userRole !== 'cliente' && userRole !== 'guest') ? {
+                    where: idSucursal ? { idSucursal: String(idSucursal) } : undefined
+                } : false,
                 promociones: {
                     where: {
                         aprobada: true,
-                        // Normalizar a medianoche para comparación de fechas
-                        fechaInicio: { lte: new Date(new Date().setHours(23, 59, 59, 999)) }, // Comenzó hoy o antes
-                        fechaFin: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } // Termina hoy o después
+                        fechaInicio: { lte: new Date(new Date().setHours(23, 59, 59, 999)) },
+                        fechaFin: { gte: new Date(new Date().setHours(0, 0, 0, 0)) }
                     }
                 }
             },

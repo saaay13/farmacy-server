@@ -13,7 +13,8 @@ export const getBatches = async (req: Request, res: Response) => {
                 activo: includeDeactivated === 'true' ? undefined : true
             },
             include: {
-                producto: true
+                producto: true,
+                sucursal: true
             },
             orderBy: { fechaVencimiento: 'asc' }
         });

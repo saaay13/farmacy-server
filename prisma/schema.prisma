@@ -30,6 +30,8 @@ model Usuario {
   alertas                    Alerta[]
   ventas_cli                 Venta[]            @relation("cliente")
   ventas_vend                Venta[]            @relation("vendedor")
+  idSucursal                 String?            @map("id_sucursal") @db.VarChar
+  sucursal                   Sucursal?          @relation(fields: [idSucursal], references: [idSucursal])
   intentosBloqueadosVendedor IntentoBloqueado[] @relation("intentos_vendedor")
   intentosBloqueadosCliente  IntentoBloqueado[] @relation("intentos_cliente")
 
@@ -43,6 +45,8 @@ model Sucursal {
   direccion   String       @db.VarChar
   activo      Boolean      @default(true)
   inventarios Inventario[]
+  lotes       Lote[]
+  usuarios    Usuario[]
 
   @@map("sucursal")
   @@schema("farmacy")
@@ -60,7 +64,7 @@ model Producto {
   activo             Boolean            @default(true)
   alertas            Alerta[]
   detalles           DetalleVenta[]
-  inventario         Inventario?
+  inventarios        Inventario[]
   lotes              Lote[]
   categoria          Categoria          @relation(fields: [idCategoria], references: [id])
   promociones        Promocion[]
@@ -71,13 +75,14 @@ model Producto {
 }
 
 model Inventario {
-  idProducto    String   @id(map: "pk_inventario") @map("id_producto") @db.VarChar
+  idProducto    String   @map("id_producto") @db.VarChar
   idSucursal    String   @map("id_sucursal") @db.VarChar
   stockTotal    Int      @map("stock_total")
   fechaRevision DateTime @map("fecha_revision") @db.Date
   producto      Producto @relation(fields: [idProducto], references: [id])
   sucursal      Sucursal @relation(fields: [idSucursal], references: [idSucursal])
 
+  @@id([idProducto, idSucursal])
   @@map("inventario")
   @@schema("farmacy")
 }
@@ -85,11 +90,13 @@ model Inventario {
 model Lote {
   id                 String             @id(map: "pk_lote") @default(dbgenerated("('l-'::text || nextval('sec_lote'::regclass))")) @db.VarChar
   idProducto         String             @map("id_producto") @db.VarChar
+  idSucursal         String?            @map("id_sucursal") @db.VarChar
   fechaVencimiento   DateTime           @map("fecha_vencimiento") @db.Date
   cantidad           Int
   numeroLote         String             @map("numero_lote") @db.VarChar
   activo             Boolean            @default(true)
   producto           Producto           @relation(fields: [idProducto], references: [id])
+  sucursal           Sucursal?          @relation(fields: [idSucursal], references: [idSucursal])
   intentosBloqueados IntentoBloqueado[]
   detallesVenta      DetalleVenta[]
 

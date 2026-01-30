@@ -12,6 +12,11 @@ export class SaleService {
             const saleDetailsData = [];
             let hayProductoVencido = false;
 
+            // Obtener sucursal del vendedor
+            const seller = await tx.usuario.findUnique({ where: { id: idVendedor }, select: { idSucursal: true } });
+            if (!seller || !seller.idSucursal) throw new Error("El vendedor no tiene una sucursal asignada");
+            const idSucursal = seller.idSucursal;
+
             for (const item of detalles) {
                 const { idProducto, cantidad } = item;
 
@@ -60,8 +65,15 @@ export class SaleService {
                     throw new Error(`BLOQUEO: El producto ${productObj.nombre} requiere receta y no puede ser comprado por su rol actual.`);
                 }
 
-                // Verificar stock
-                const inventory = await tx.inventario.findUnique({ where: { idProducto } });
+                // Verificar stock en la sucursal del vendedor
+                const inventory = await tx.inventario.findUnique({
+                    where: {
+                        idProducto_idSucursal: {
+                            idProducto,
+                            idSucursal
+                        }
+                    }
+                });
                 if (!inventory || inventory.stockTotal < cantidad) {
                     // Registrar intento bloqueado por stock insuficiente (Fuera de la transacción)
                     await prisma.intentoBloqueado.create({
@@ -92,14 +104,14 @@ export class SaleService {
                 // Lógica FIFO
                 let cantidadRestante = cantidad;
                 const lotesData = await tx.lote.findMany({
-                    where: { idProducto, activo: true },
+                    where: { idProducto, idSucursal, activo: true },
                     orderBy: { fechaVencimiento: 'asc' }
                 });
 
                 for (const l of lotesData) {
                     if (cantidadRestante <= 0) break;
 
-                    const loteObj = new LoteModel(l.id, l.idProducto, l.fechaVencimiento, l.cantidad, l.numeroLote);
+                    const loteObj = new LoteModel(l.id, l.idProducto, l.fechaVencimiento, l.cantidad, l.numeroLote, l.idSucursal);
 
                     if (loteObj.estaVencido()) {
                         hayProductoVencido = true;
@@ -160,9 +172,14 @@ export class SaleService {
 
                 if (cantidadRestante > 0) throw new Error(`Stock real inconsistente para ${productObj.nombre}`);
 
-                // Actualizar inventario
+                // Actualizar inventario de la sucursal
                 await tx.inventario.update({
-                    where: { idProducto },
+                    where: {
+                        idProducto_idSucursal: {
+                            idProducto,
+                            idSucursal
+                        }
+                    },
                     data: { stockTotal: { decrement: cantidad }, fechaRevision: new Date() }
                 });
             }

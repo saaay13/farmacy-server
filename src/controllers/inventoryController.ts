@@ -50,7 +50,7 @@ export const getInventoryByProduct = async (req: Request, res: Response) => {
     try {
         const { idProducto } = req.params;
 
-        const inventory = await prisma.inventario.findUnique({
+        const inventories = await prisma.inventario.findMany({
             where: { idProducto: String(idProducto) },
             include: {
                 producto: true,
@@ -58,27 +58,31 @@ export const getInventoryByProduct = async (req: Request, res: Response) => {
             }
         });
 
-        if (!inventory) {
+        if (!inventories || inventories.length === 0) {
             return res.status(404).json({ success: false, message: 'No hay registro de inventario para este producto' });
         }
 
         // --- USO DE MODELO POO ---
-        const invObj = new InventarioModel(
-            inventory.idProducto,
-            inventory.idSucursal,
-            inventory.stockTotal,
-            inventory.fechaRevision
-        );
-
-        res.json({
-            success: true,
-            data: {
-                ...inventory,
+        // Retornamos un resumen o la lista completa
+        const enrichedInventories = inventories.map(inv => {
+            const invObj = new InventarioModel(
+                inv.idProducto,
+                inv.idSucursal,
+                inv.stockTotal,
+                inv.fechaRevision
+            );
+            return {
+                ...inv,
                 infoPOO: {
                     stockActual: invObj.stockTotal,
                     esCritico: invObj.esStockCritico()
                 }
-            }
+            };
+        });
+
+        res.json({
+            success: true,
+            data: enrichedInventories
         });
     } catch (error: any) {
         res.status(500).json({ success: false, message: 'Error al obtener detalle de inventario', error: error.message });
