@@ -16,8 +16,24 @@ export class SaleService {
                 const { idProducto, cantidad } = item;
 
                 // Validar producto
-                const productData = await tx.producto.findFirst({ where: { id: idProducto, activo: true } });
+                const productData = await tx.producto.findUnique({ where: { id: idProducto } });
                 if (!productData) throw new Error(`Producto ${idProducto} no encontrado`);
+
+                if (!productData.activo) {
+                    // Registrar intento bloqueado por producto inactivo (Fuera de la transacción)
+                    await prisma.intentoBloqueado.create({
+                        data: {
+                            idVendedor,
+                            idCliente,
+                            motivo: 'PRODUCTO_INACTIVO',
+                            idProducto,
+                            cantidadIntento: cantidad,
+                            mensaje: `BLOQUEO: Intento de vender el producto ${productData.nombre} que está inactivo`,
+                            fecha: new Date()
+                        }
+                    });
+                    throw new Error(`BLOQUEO: El producto ${productData.nombre} está inactivo.`);
+                }
 
                 const productObj = new ProductoModel(
                     productData.id,
@@ -29,12 +45,36 @@ export class SaleService {
                 );
 
                 if (!productObj.puedeSerCompradoPor(userRole)) {
+                    // Registrar intento bloqueado por receta médica (Fuera de la transacción para que persista)
+                    await prisma.intentoBloqueado.create({
+                        data: {
+                            idVendedor,
+                            idCliente,
+                            motivo: 'REQUIERE_RECETA',
+                            idProducto,
+                            cantidadIntento: cantidad,
+                            mensaje: `BLOQUEO: El producto ${productObj.nombre} requiere receta médica y no puede ser vendido a clientes sin autorización`,
+                            fecha: new Date()
+                        }
+                    });
                     throw new Error(`BLOQUEO: El producto ${productObj.nombre} requiere receta y no puede ser comprado por su rol actual.`);
                 }
 
                 // Verificar stock
                 const inventory = await tx.inventario.findUnique({ where: { idProducto } });
                 if (!inventory || inventory.stockTotal < cantidad) {
+                    // Registrar intento bloqueado por stock insuficiente (Fuera de la transacción)
+                    await prisma.intentoBloqueado.create({
+                        data: {
+                            idVendedor,
+                            idCliente,
+                            motivo: 'STOCK_INSUFICIENTE',
+                            idProducto,
+                            cantidadIntento: cantidad,
+                            mensaje: `BLOQUEO: Stock insuficiente para ${productObj.nombre}. Stock actual: ${inventory?.stockTotal || 0}, Solicitado: ${cantidad}`,
+                            fecha: new Date()
+                        }
+                    });
                     throw new Error(`Stock insuficiente para ${productObj.nombre}.`);
                 }
 
@@ -63,6 +103,21 @@ export class SaleService {
 
                     if (loteObj.estaVencido()) {
                         hayProductoVencido = true;
+
+                        // Registrar intento bloqueado por producto vencido (Fuera de la transacción)
+                        await prisma.intentoBloqueado.create({
+                            data: {
+                                idVendedor,
+                                idCliente,
+                                motivo: 'PRODUCTO_VENCIDO',
+                                idProducto,
+                                idLote: loteObj.id,
+                                cantidadIntento: cantidad,
+                                mensaje: `BLOQUEO: Lote ${loteObj.numeroLote} de ${productObj.nombre} está vencido (vencimiento: ${loteObj.fechaVencimiento.toLocaleDateString()})`,
+                                fecha: new Date()
+                            }
+                        });
+
                         throw new Error(`BLOQUEO: Lote ${loteObj.numeroLote} de ${productObj.nombre} está vencido.`);
                     }
 
@@ -93,6 +148,7 @@ export class SaleService {
                     // Crear detalle de venta separado por lote (cuando hay diferencia de precio)
                     saleDetailsData.push({
                         idProducto,
+                        idLote: loteObj.id,
                         cantidad: cantidadADescontar,
                         precioUnitario,
                         subtotal: subtotalLote

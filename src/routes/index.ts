@@ -11,6 +11,7 @@ import authRoutes from './authRoutes';
 import logisticsRoutes from './logisticsRoutes';
 import branchRoutes from './branchRoutes';
 import userRoutes from './userRoutes';
+import blockedAttemptRoutes from './blockedAttemptRoutes';
 const router = Router();
 
 router.use('/auth', authRoutes);
@@ -23,6 +24,7 @@ router.use('/alerts', alertRoutes);
 router.use('/promotions', promotionRoutes);
 router.use('/sales', saleRoutes);
 router.use('/reports', reportRoutes);
-router.use('/logistics', logisticsRoutes); // Added
-router.use('/branches', branchRoutes); // Added
+router.use('/logistics', logisticsRoutes);
+router.use('/branches', branchRoutes);
+router.use('/blocked-attempts', blockedAttemptRoutes);
 export default router;
