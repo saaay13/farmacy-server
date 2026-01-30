@@ -19,7 +19,10 @@ export const checkAndGenerateAlerts = async (req: Request, res: Response) => {
                 },
                 activo: true
             },
-            include: { producto: true }
+            include: {
+                producto: true,
+                sucursal: true
+            }
         });
 
         for (const batch of expiringBatches) {
@@ -32,50 +35,56 @@ export const checkAndGenerateAlerts = async (req: Request, res: Response) => {
                 }
             });
 
-            const alert = await prisma.alerta.create({
-                data: {
-                    tipo: 'expirado',
-                    mensaje: `Lote ${batch.numeroLote} del producto ${batch.producto.nombre} vencerá el ${batch.fechaVencimiento.toLocaleDateString()}`,
-                    fecha: new Date(),
-                    idProducto: batch.idProducto,
-                    idUsuario: (req as any).user.id
-                }
-            });
-            alertsCreated.push(alert);
-
-            // SUGERENCIA DE PROMOCIÓN AUTOMÁTICA
-            // Verificar si ya hay una promoción pendiente para este producto
-            const existingPromo = await prisma.promocion.findFirst({
-                where: { idProducto: batch.idProducto, aprobada: false }
-            });
-
-            if (!existingPromo) {
-                await prisma.promocion.create({
+            if (!existingAlert) {
+                const sucursalNombre = batch.sucursal?.nombre || 'Sucursal desconocida';
+                const alert = await prisma.alerta.create({
                     data: {
+                        tipo: 'expirado',
+                        mensaje: `VENCIMIENTO PRÓXIMO: ${batch.producto.nombre} en ${sucursalNombre} (Lote: ${batch.numeroLote}) vencerá el ${batch.fechaVencimiento.toLocaleDateString()}`,
+                        fecha: new Date(),
                         idProducto: batch.idProducto,
-                        porcentajeDescuento: 15.00, // Sugerencia base
-                        fechaInicio: new Date(),
-                        fechaFin: batch.fechaVencimiento,
-                        aprobada: false
+                        idUsuario: (req as any).user.id
                     }
                 });
+                alertsCreated.push(alert);
+
+                // SUGERENCIA DE PROMOCIÓN AUTOMÁTICA
+                const existingPromo = await prisma.promocion.findFirst({
+                    where: { idProducto: batch.idProducto, aprobada: false }
+                });
+
+                if (!existingPromo) {
+                    await prisma.promocion.create({
+                        data: {
+                            idProducto: batch.idProducto,
+                            porcentajeDescuento: 15.00,
+                            fechaInicio: new Date(),
+                            fechaFin: batch.fechaVencimiento,
+                            aprobada: false
+                        }
+                    });
+                }
             }
         }
 
-        // 2. Revisar stock bajo (digamos < 10 unidades por simplicidad)
+        // 2. Revisar stock bajo (< 10 unidades)
         const lowStockInventory = await prisma.inventario.findMany({
             where: {
-                stockTotal: { lt: 10 },
+                stockTotal: { lte: 10 },
                 producto: { activo: true }
             },
-            include: { producto: true }
+            include: {
+                producto: true,
+                sucursal: true
+            }
         });
 
         for (const item of lowStockInventory) {
             const existingAlert = await prisma.alerta.findFirst({
                 where: {
                     idProducto: item.idProducto,
-                    tipo: 'stock_bajo'
+                    tipo: 'stock_bajo',
+                    mensaje: { contains: item.sucursal.nombre }
                 }
             });
 
@@ -83,7 +92,7 @@ export const checkAndGenerateAlerts = async (req: Request, res: Response) => {
                 const alert = await prisma.alerta.create({
                     data: {
                         tipo: 'stock_bajo',
-                        mensaje: `Stock bajo para ${item.producto.nombre}: solo quedan ${item.stockTotal} unidades`,
+                        mensaje: `STOCK BAJO: ${item.producto.nombre} en ${item.sucursal.nombre} (Solo quedan ${item.stockTotal} unidades)`,
                         fecha: new Date(),
                         idProducto: item.idProducto,
                         idUsuario: (req as any).user.id

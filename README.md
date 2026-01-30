@@ -48,6 +48,7 @@ El servidor estará disponible en `http://localhost:3001`
 ### 1. Blindaje Operativo
 - **Bloqueo de Vencidos**: No se permite la venta de productos caducados (Implementado en `SaleService`).
 - **Control de Recetas**: Validación por rol para medicamentos que requieren receta médica.
+- **Auditoría de Intentos**: Registro automático de intentos de venta bloqueados (por stock, receta, vencimiento o inactividad) en la tabla `IntentoBloqueado`.
 - **Privacidad "Data Owner"**: Los clientes solo visualizan sus propias compras y un catálogo restringido.
 
 ### 2. Automatización (Cron Jobs)
@@ -72,7 +73,8 @@ El servidor estará disponible en `http://localhost:3001`
 | **Ventas** | `/api/sales` | Procesamiento transaccional enriquecido |
 | **Logística** | `/api/logistics` | Reabastecimiento inteligente y reportes |
 | **Promociones**| `/api/promotions`| Gestión y aprobación de descuentos |
-| **Alertas** | `/api/alerts` | Visualización de notificaciones del sistema |
+| **Alertas**     | `/api/alerts`     | Visualización de notificaciones del sistema |
+| **Bloqueos**   | `/api/blocked-attempts` | Auditoría de intentos de venta fallidos |
 
 ---
 
@@ -84,8 +86,9 @@ El servidor estará disponible en `http://localhost:3001`
 | **Productos** | CRUD Total | Ver catálogo | Ver catálogo | Ver catálogo* |
 | **Inventario** | CRUD Total | Actualizar Stock | Ver stock | Sin acceso |
 | **Lote** | CRUD Total | Alta/Baja Lotes | Ver lotes | Sin acceso |
-| **Ventas** | Supervisión | Realizar Venta | Realizar Venta | Ver sus compras |
-| **Logística** | CRUD Total | Ver Reportes | Sin acceso | Sin acceso |
+| **Ventas**     | Supervisión   | Realizar Venta | Realizar Venta | Ver sus compras |
+| **Logística**  | CRUD Total    | Ver Reportes   | Sin acceso     | Sin acceso      |
+| **Bloqueos**   | Gestión Total | Ver Reportes   | Sin acceso     | Sin acceso      |
 
 > [!NOTE]
 > * **Privacidad de Clientes**: Filtrado automático de:

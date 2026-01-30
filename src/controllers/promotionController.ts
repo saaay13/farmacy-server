@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { PromocionModel } from '../models/Promocion';
 
-// 1. Obtener promociones (filtrables por aprobación)
+// Obtener promociones (filtrables por aprobación)
 export const getPromotions = async (req: Request, res: Response) => {
     try {
         const { aprobada } = req.query;

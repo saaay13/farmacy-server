@@ -61,8 +61,18 @@ export const deleteBatch = async (req: Request, res: Response) => {
                 throw new Error('Lote no encontrado');
             }
 
+            if (!batch.idSucursal) {
+                throw new Error('El lote no tiene una sucursal asignada');
+            }
+
+            // Actualizar inventario usando clave compuesta
             await tx.inventario.update({
-                where: { idProducto: batch.idProducto },
+                where: {
+                    idProducto_idSucursal: {
+                        idProducto: batch.idProducto,
+                        idSucursal: batch.idSucursal
+                    }
+                },
                 data: {
                     stockTotal: { decrement: batch.cantidad },
                     fechaRevision: new Date()
@@ -97,9 +107,18 @@ export const restoreBatch = async (req: Request, res: Response) => {
                 throw new Error('El lote ya está activo');
             }
 
-            // Incrementar inventario
+            if (!batch.idSucursal) {
+                throw new Error('El lote no tiene una sucursal asignada');
+            }
+
+            // Incrementar inventario usando clave compuesta
             await tx.inventario.update({
-                where: { idProducto: batch.idProducto },
+                where: {
+                    idProducto_idSucursal: {
+                        idProducto: batch.idProducto,
+                        idSucursal: batch.idSucursal
+                    }
+                },
                 data: {
                     stockTotal: { increment: batch.cantidad },
                     fechaRevision: new Date()

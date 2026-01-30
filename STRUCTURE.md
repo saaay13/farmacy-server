@@ -14,6 +14,7 @@ Listado jerárquico de carpetas y archivos del backend.
     │   ├── alertController.ts
     │   ├── authController.ts
     │   ├── batchController.ts
+    │   ├── blockedAttemptController.ts
     │   ├── branchController.ts
     │   ├── categoryController.ts
     │   ├── homeController.ts
@@ -30,6 +31,7 @@ Listado jerárquico de carpetas y archivos del backend.
     │   ├── Alerta.ts
     │   ├── Categoria.ts
     │   ├── DetalleVenta.ts
+    │   ├── IntentoBloqueado.ts
     │   ├── Inventario.ts
     │   ├── Lote.ts
     │   ├── Producto.ts
@@ -41,6 +43,7 @@ Listado jerárquico de carpetas y archivos del backend.
     │   ├── alertRoutes.ts
     │   ├── authRoutes.ts
     │   ├── batchRoutes.ts
+    │   ├── blockedAttemptRoutes.ts
     │   ├── branchRoutes.ts
     │   ├── categoryRoutes.ts
     │   ├── inventoryRoutes.ts
